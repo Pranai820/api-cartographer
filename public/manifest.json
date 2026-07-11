@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "API Cartographer",
+  "description": "Map live DevTools network traffic into endpoint docs and OpenAPI drafts.",
+  "version": "0.1.0",
+  "minimum_chrome_version": "114",
+  "devtools_page": "devtools.html",
+  "action": {
+    "default_title": "API Cartographer",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": ["storage"]
+}

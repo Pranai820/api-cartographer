@@ -1,0 +1,28 @@
+{
+  "name": "api-cartographer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome DevTools extension that maps live network traffic into API documentation and OpenAPI drafts.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc -p tsconfig.json && vite build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.17",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^6.0.3",
+    "typescript": "^5.7.2",
+    "vite": "^8.1.4",
+    "vitest": "^4.1.10"
+  }
+}
