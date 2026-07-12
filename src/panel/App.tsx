@@ -12,6 +12,7 @@ import {
   Trash2
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { filterEndpointGroups, listContentTypes, listMethods, listStatusCodes } from "../lib/filters";
 import { formatDuration, formatStatusCounts } from "../lib/format";
 import { buildMarkdownReport } from "../lib/markdown-report";
 import { buildOpenApiDocument } from "../lib/openapi";
@@ -29,6 +30,9 @@ export function App() {
   const [isCapturing, setIsCapturing] = useState(true);
   const [filter, setFilter] = useState("");
   const [originFilter, setOriginFilter] = useState("all");
+  const [methodFilter, setMethodFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [contentTypeFilter, setContentTypeFilter] = useState("all");
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [lastExportStatus, setLastExportStatus] = useState<string>("idle");
   const listenerAttached = useRef(false);
@@ -69,22 +73,22 @@ export function App() {
 
   const groups = useMemo(() => groupRequests(requests), [requests]);
   const origins = useMemo(() => Array.from(new Set(groups.map((group) => group.origin))).sort(), [groups]);
+  const methods = useMemo(() => listMethods(groups), [groups]);
+  const statusCodes = useMemo(() => listStatusCodes(groups), [groups]);
+  const contentTypes = useMemo(() => listContentTypes(groups), [groups]);
   const filteredGroups = useMemo(() => {
     if (!groups.length) {
       return EMPTY_GROUPS;
     }
 
-    const normalizedFilter = filter.trim().toLowerCase();
-
-    return groups.filter((group) => {
-      const matchesOrigin = originFilter === "all" || group.origin === originFilter;
-      const matchesSearch =
-        !normalizedFilter ||
-        `${group.method} ${group.origin}${group.pathTemplate}`.toLowerCase().includes(normalizedFilter);
-
-      return matchesOrigin && matchesSearch;
+    return filterEndpointGroups(groups, {
+      search: filter,
+      origin: originFilter,
+      method: methodFilter,
+      status: statusFilter,
+      contentType: contentTypeFilter
     });
-  }, [filter, groups, originFilter]);
+  }, [contentTypeFilter, filter, groups, methodFilter, originFilter, statusFilter]);
 
   const selectedGroup = useMemo(() => {
     return filteredGroups.find((group) => group.id === selectedGroupId) ?? filteredGroups[0];
@@ -197,7 +201,54 @@ export function App() {
               ))}
             </select>
           </div>
+          <div className="control-block">
+            <label htmlFor="method-filter">
+              <Filter size={15} />
+              Method
+            </label>
+            <select id="method-filter" value={methodFilter} onChange={(event) => setMethodFilter(event.target.value)}>
+              <option value="all">All methods</option>
+              {methods.map((method) => (
+                <option key={method} value={method}>
+                  {method}
+                </option>
+              ))}
+            </select>
+          </div>
 
+          <div className="control-block">
+            <label htmlFor="status-filter">
+              <CheckCircle2 size={15} />
+              Status
+            </label>
+            <select id="status-filter" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <option value="all">All statuses</option>
+              {statusCodes.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="control-block">
+            <label htmlFor="content-type-filter">
+              <FileText size={15} />
+              Content Type
+            </label>
+            <select
+              id="content-type-filter"
+              value={contentTypeFilter}
+              onChange={(event) => setContentTypeFilter(event.target.value)}
+            >
+              <option value="all">All content types</option>
+              {contentTypes.map((contentType) => (
+                <option key={contentType} value={contentType}>
+                  {contentType}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="export-block">
             <p className="block-title">
               <Braces size={15} />
