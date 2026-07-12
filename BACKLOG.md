@@ -4,12 +4,9 @@
 
 - Add endpoint detail tabs for samples, schema, and export preview.
 - Add sensitive header redaction before rendering and exporting.
-- Add multi-sample schema merging.
 - Add named capture sessions.
 - Add HAR file import.
-- Add Markdown report export.
 - Add endpoint ignore and pin controls.
-- Add status/method/content-type filter presets.
 - Add OpenAPI title and version controls.
 - Add extension icon assets.
 - Add release packaging script.
@@ -25,6 +22,9 @@
 
 ## Done
 
+- Added multi-sample schema merging for OpenAPI request and response bodies.
+- Added Markdown report export.
+- Added status/method/content-type filter presets.
 - Initialized Manifest V3 DevTools extension skeleton.
 - Added request grouping and OpenAPI export baseline.
 - Added first unit tests for request modeling and export.
