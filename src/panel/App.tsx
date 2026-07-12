@@ -2,6 +2,7 @@ import {
   Braces,
   CheckCircle2,
   Download,
+  FileText,
   Filter,
   Globe2,
   PauseCircle,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatDuration, formatStatusCounts } from "../lib/format";
+import { buildMarkdownReport } from "../lib/markdown-report";
 import { buildOpenApiDocument } from "../lib/openapi";
 import { createCapturedRequestFromHarEntry } from "../lib/request-model";
 import { groupRequests } from "../lib/request-model";
@@ -28,7 +30,7 @@ export function App() {
   const [filter, setFilter] = useState("");
   const [originFilter, setOriginFilter] = useState("all");
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const [lastExportStatus, setLastExportStatus] = useState<"idle" | "copied" | "downloaded">("idle");
+  const [lastExportStatus, setLastExportStatus] = useState<string>("idle");
   const listenerAttached = useRef(false);
   const isCapturingRef = useRef(isCapturing);
 
@@ -97,10 +99,11 @@ export function App() {
   const openApiJson = useMemo(() => {
     return JSON.stringify(buildOpenApiDocument(filteredGroups), null, 2);
   }, [filteredGroups]);
+  const markdownReport = useMemo(() => buildMarkdownReport(filteredGroups), [filteredGroups]);
 
   async function copyOpenApi() {
     await navigator.clipboard.writeText(openApiJson);
-    setLastExportStatus("copied");
+    setLastExportStatus("OpenAPI copied");
   }
 
   function downloadOpenApi() {
@@ -111,7 +114,23 @@ export function App() {
     anchor.download = "api-cartographer-openapi.json";
     anchor.click();
     URL.revokeObjectURL(url);
-    setLastExportStatus("downloaded");
+    setLastExportStatus("OpenAPI downloaded");
+  }
+
+  async function copyMarkdownReport() {
+    await navigator.clipboard.writeText(markdownReport);
+    setLastExportStatus("Markdown copied");
+  }
+
+  function downloadMarkdownReport() {
+    const blob = new Blob([markdownReport], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "api-cartographer-report.md";
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setLastExportStatus("Markdown downloaded");
   }
 
   async function resetCapture() {
@@ -190,9 +209,17 @@ export function App() {
             </button>
             <button className="button button-full" type="button" onClick={downloadOpenApi}>
               <Download size={16} />
-              Download
+              Download JSON
             </button>
-            {lastExportStatus !== "idle" ? <p className="subtle">Last export {lastExportStatus}.</p> : null}
+            <button className="button button-full" type="button" onClick={copyMarkdownReport}>
+              <FileText size={16} />
+              Copy Markdown
+            </button>
+            <button className="button button-full" type="button" onClick={downloadMarkdownReport}>
+              <Download size={16} />
+              Download MD
+            </button>
+            {lastExportStatus !== "idle" ? <p className="subtle">Last export: {lastExportStatus}.</p> : null}
           </div>
         </aside>
 
