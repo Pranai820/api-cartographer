@@ -2,16 +2,29 @@ import {
   Braces,
   CheckCircle2,
   Download,
+  Eye,
+  EyeOff,
   FileText,
   Filter,
   Globe2,
   PauseCircle,
+  Pin,
+  PinOff,
   PlayCircle,
   RefreshCw,
   Search,
   Trash2
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  applyEndpointPreferences,
+  EMPTY_ENDPOINT_PREFERENCES,
+  isIgnored,
+  isPinned,
+  toggleIgnored,
+  togglePinned,
+  type EndpointPreferences
+} from "../lib/endpoint-preferences";
 import { filterEndpointGroups, listContentTypes, listMethods, listStatusCodes } from "../lib/filters";
 import { formatDuration, formatStatusCounts } from "../lib/format";
 import { buildMarkdownReport } from "../lib/markdown-report";
@@ -19,7 +32,13 @@ import { buildOpenApiDocument } from "../lib/openapi";
 import { createCapturedRequestFromHarEntry } from "../lib/request-model";
 import { redactCapturedRequest, redactEndpointGroups } from "../lib/redaction";
 import { groupRequests } from "../lib/request-model";
-import { clearCapturedRequests, loadCapturedRequests, saveCapturedRequests } from "../lib/storage";
+import {
+  clearCapturedRequests,
+  loadCapturedRequests,
+  loadEndpointPreferences,
+  saveCapturedRequests,
+  saveEndpointPreferences
+} from "../lib/storage";
 import type { CapturedRequest, EndpointGroup } from "../lib/types";
 
 type DevtoolsRequest = chrome.devtools.network.Request;
@@ -34,6 +53,8 @@ export function App() {
   const [methodFilter, setMethodFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [contentTypeFilter, setContentTypeFilter] = useState("all");
+  const [showIgnored, setShowIgnored] = useState(false);
+  const [endpointPreferences, setEndpointPreferences] = useState<EndpointPreferences>(EMPTY_ENDPOINT_PREFERENCES);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [lastExportStatus, setLastExportStatus] = useState<string>("idle");
   const listenerAttached = useRef(false);
@@ -45,11 +66,16 @@ export function App() {
 
   useEffect(() => {
     loadCapturedRequests().then(setRequests);
+    loadEndpointPreferences().then(setEndpointPreferences);
   }, []);
 
   useEffect(() => {
     saveCapturedRequests(requests);
   }, [requests]);
+
+  useEffect(() => {
+    saveEndpointPreferences(endpointPreferences);
+  }, [endpointPreferences]);
 
   useEffect(() => {
     if (listenerAttached.current || typeof chrome === "undefined" || !chrome.devtools?.network) {
@@ -77,7 +103,7 @@ export function App() {
   const methods = useMemo(() => listMethods(groups), [groups]);
   const statusCodes = useMemo(() => listStatusCodes(groups), [groups]);
   const contentTypes = useMemo(() => listContentTypes(groups), [groups]);
-  const filteredGroups = useMemo(() => {
+  const matchedGroups = useMemo(() => {
     if (!groups.length) {
       return EMPTY_GROUPS;
     }
@@ -90,6 +116,11 @@ export function App() {
       contentType: contentTypeFilter
     });
   }, [contentTypeFilter, filter, groups, methodFilter, originFilter, statusFilter]);
+  const filteredGroups = useMemo(
+    () => applyEndpointPreferences(matchedGroups, endpointPreferences, showIgnored),
+    [endpointPreferences, matchedGroups, showIgnored]
+  );
+  const hiddenIgnoredCount = matchedGroups.length - filteredGroups.length;
 
   const selectedGroup = useMemo(() => {
     return filteredGroups.find((group) => group.id === selectedGroupId) ?? filteredGroups[0];
@@ -139,6 +170,14 @@ export function App() {
     setLastExportStatus("Markdown downloaded");
   }
 
+  function toggleEndpointPin(endpointId: string) {
+    setEndpointPreferences((current) => togglePinned(current, endpointId));
+  }
+
+  function toggleEndpointIgnore(endpointId: string) {
+    setEndpointPreferences((current) => toggleIgnored(current, endpointId));
+  }
+
   async function resetCapture() {
     setRequests([]);
     await clearCapturedRequests();
@@ -172,6 +211,7 @@ export function App() {
         <Metric label="Endpoints" value={groups.length.toString()} />
         <Metric label="Origins" value={origins.length.toString()} />
         <Metric label="Visible" value={filteredGroups.length.toString()} />
+        <Metric label="Hidden" value={hiddenIgnoredCount.toString()} />
       </section>
 
       <section className="workspace">
@@ -251,6 +291,11 @@ export function App() {
               ))}
             </select>
           </div>
+          <button className="button button-full" type="button" onClick={() => setShowIgnored((value) => !value)}>
+            {showIgnored ? <EyeOff size={16} /> : <Eye size={16} />}
+            {showIgnored ? "Hide Ignored" : "Show Ignored"}
+          </button>
+
           <div className="export-block">
             <p className="block-title">
               <Braces size={15} />
@@ -287,19 +332,44 @@ export function App() {
 
           {filteredGroups.length ? (
             <div className="endpoint-table">
-              {filteredGroups.map((group) => (
-                <button
-                  className={group.id === selectedGroup?.id ? "endpoint-row endpoint-row-selected" : "endpoint-row"}
-                  key={group.id}
-                  type="button"
-                  onClick={() => setSelectedGroupId(group.id)}
-                >
-                  <span className={`method method-${group.method.toLowerCase()}`}>{group.method}</span>
-                  <span className="endpoint-path">{group.pathTemplate}</span>
-                  <span className="endpoint-origin">{group.origin}</span>
-                  <span className="endpoint-count">{group.count}</span>
-                </button>
-              ))}
+              {filteredGroups.map((group) => {
+                const pinned = isPinned(endpointPreferences, group.id);
+                const ignored = isIgnored(endpointPreferences, group.id);
+
+                return (
+                  <div
+                    className={`endpoint-row${group.id === selectedGroup?.id ? " endpoint-row-selected" : ""}${
+                      pinned ? " endpoint-row-pinned" : ""
+                    }${ignored ? " endpoint-row-ignored" : ""}`}
+                    key={group.id}
+                  >
+                    <button className="endpoint-row-main" type="button" onClick={() => setSelectedGroupId(group.id)}>
+                      <span className={`method method-${group.method.toLowerCase()}`}>{group.method}</span>
+                      <span className="endpoint-path">{group.pathTemplate}</span>
+                      <span className="endpoint-origin">{group.origin}</span>
+                      <span className="endpoint-count">{group.count}</span>
+                    </button>
+                    <div className="endpoint-actions">
+                      <button
+                        className="endpoint-action"
+                        type="button"
+                        onClick={() => toggleEndpointPin(group.id)}
+                        title={pinned ? "Unpin endpoint" : "Pin endpoint"}
+                      >
+                        {pinned ? <PinOff size={15} /> : <Pin size={15} />}
+                      </button>
+                      <button
+                        className="endpoint-action"
+                        type="button"
+                        onClick={() => toggleEndpointIgnore(group.id)}
+                        title={ignored ? "Restore endpoint" : "Ignore endpoint"}
+                      >
+                        {ignored ? <Eye size={15} /> : <EyeOff size={15} />}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="empty-state">
