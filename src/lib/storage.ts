@@ -1,8 +1,10 @@
 import { EMPTY_ENDPOINT_PREFERENCES, normalizeEndpointPreferences, type EndpointPreferences } from "./endpoint-preferences";
+import { normalizeCaptureSessions, type CaptureSession } from "./sessions";
 import type { CapturedRequest } from "./types";
 
 const REQUESTS_KEY = "api-cartographer:requests";
 const ENDPOINT_PREFERENCES_KEY = "api-cartographer:endpoint-preferences";
+const SESSIONS_KEY = "api-cartographer:sessions";
 
 function hasChromeStorage(): boolean {
   return typeof chrome !== "undefined" && Boolean(chrome.storage?.local);
@@ -55,4 +57,24 @@ export async function saveEndpointPreferences(preferences: EndpointPreferences):
   }
 
   await chrome.storage.local.set({ [ENDPOINT_PREFERENCES_KEY]: normalizeEndpointPreferences(preferences) });
+}
+
+export async function loadCaptureSessions(): Promise<CaptureSession[]> {
+  if (!hasChromeStorage()) {
+    return [];
+  }
+
+  return new Promise((resolve) => {
+    chrome.storage.local.get([SESSIONS_KEY], (result) => {
+      resolve(normalizeCaptureSessions(result[SESSIONS_KEY]));
+    });
+  });
+}
+
+export async function saveCaptureSessions(sessions: CaptureSession[]): Promise<void> {
+  if (!hasChromeStorage()) {
+    return;
+  }
+
+  await chrome.storage.local.set({ [SESSIONS_KEY]: normalizeCaptureSessions(sessions) });
 }

@@ -107,6 +107,11 @@ h3 {
   border-color: #7aa394;
 }
 
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .button-live {
   border-color: #2d8b76;
   background: #e9f7f2;
@@ -466,4 +471,38 @@ pre {
   padding: 12px;
   white-space: pre-wrap;
   word-break: break-word;
+}
+.session-list {
+  display: grid;
+  gap: 6px;
+}
+
+.session-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.session-restore {
+  min-width: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #d8ded4;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #2f3631;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 750;
+  padding: 0 9px;
+}
+
+.session-restore span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

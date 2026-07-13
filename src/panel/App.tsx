@@ -4,6 +4,7 @@ import {
   Download,
   Eye,
   EyeOff,
+  FolderOpen,
   FileText,
   Filter,
   Globe2,
@@ -12,6 +13,8 @@ import {
   PinOff,
   PlayCircle,
   RefreshCw,
+  RotateCcw,
+  Save,
   Search,
   Trash2
 } from "lucide-react";
@@ -32,11 +35,14 @@ import { buildOpenApiDocument } from "../lib/openapi";
 import { createCapturedRequestFromHarEntry } from "../lib/request-model";
 import { redactCapturedRequest, redactEndpointGroups } from "../lib/redaction";
 import { groupRequests } from "../lib/request-model";
+import { createCaptureSession, deleteCaptureSession, upsertCaptureSession, type CaptureSession } from "../lib/sessions";
 import {
   clearCapturedRequests,
   loadCapturedRequests,
+  loadCaptureSessions,
   loadEndpointPreferences,
   saveCapturedRequests,
+  saveCaptureSessions,
   saveEndpointPreferences
 } from "../lib/storage";
 import type { CapturedRequest, EndpointGroup } from "../lib/types";
@@ -55,6 +61,8 @@ export function App() {
   const [contentTypeFilter, setContentTypeFilter] = useState("all");
   const [showIgnored, setShowIgnored] = useState(false);
   const [endpointPreferences, setEndpointPreferences] = useState<EndpointPreferences>(EMPTY_ENDPOINT_PREFERENCES);
+  const [sessionName, setSessionName] = useState("Untitled capture");
+  const [sessions, setSessions] = useState<CaptureSession[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [lastExportStatus, setLastExportStatus] = useState<string>("idle");
   const listenerAttached = useRef(false);
@@ -67,6 +75,7 @@ export function App() {
   useEffect(() => {
     loadCapturedRequests().then(setRequests);
     loadEndpointPreferences().then(setEndpointPreferences);
+    loadCaptureSessions().then(setSessions);
   }, []);
 
   useEffect(() => {
@@ -76,6 +85,10 @@ export function App() {
   useEffect(() => {
     saveEndpointPreferences(endpointPreferences);
   }, [endpointPreferences]);
+
+  useEffect(() => {
+    saveCaptureSessions(sessions);
+  }, [sessions]);
 
   useEffect(() => {
     if (listenerAttached.current || typeof chrome === "undefined" || !chrome.devtools?.network) {
@@ -176,6 +189,23 @@ export function App() {
 
   function toggleEndpointIgnore(endpointId: string) {
     setEndpointPreferences((current) => toggleIgnored(current, endpointId));
+  }
+
+  function saveCurrentSession() {
+    const nextSession = createCaptureSession(sessionName, requests);
+    setSessions((current) => upsertCaptureSession(current, nextSession));
+    setSessionName(nextSession.name);
+    setLastExportStatus("Session saved: " + nextSession.name);
+  }
+
+  function restoreSession(session: CaptureSession) {
+    setRequests(session.requests);
+    setSessionName(session.name);
+    setLastExportStatus("Session restored: " + session.name);
+  }
+
+  function removeSession(sessionId: string) {
+    setSessions((current) => deleteCaptureSession(current, sessionId));
   }
 
   async function resetCapture() {
@@ -296,6 +326,37 @@ export function App() {
             {showIgnored ? "Hide Ignored" : "Show Ignored"}
           </button>
 
+          <div className="session-block">
+            <p className="block-title">
+              <FolderOpen size={15} />
+              Sessions
+            </p>
+            <input
+              id="session-name"
+              value={sessionName}
+              onChange={(event) => setSessionName(event.target.value)}
+              placeholder="Capture name"
+            />
+            <button className="button button-full" type="button" onClick={saveCurrentSession} disabled={!requests.length}>
+              <Save size={16} />
+              Save Session
+            </button>
+            {sessions.length ? (
+              <div className="session-list">
+                {sessions.slice(0, 4).map((session) => (
+                  <div className="session-row" key={session.id}>
+                    <button className="session-restore" type="button" onClick={() => restoreSession(session)} title="Restore session">
+                      <RotateCcw size={14} />
+                      <span>{session.name}</span>
+                    </button>
+                    <button className="endpoint-action" type="button" onClick={() => removeSession(session.id)} title="Delete session">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
           <div className="export-block">
             <p className="block-title">
               <Braces size={15} />
