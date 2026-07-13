@@ -17,6 +17,7 @@ import { formatDuration, formatStatusCounts } from "../lib/format";
 import { buildMarkdownReport } from "../lib/markdown-report";
 import { buildOpenApiDocument } from "../lib/openapi";
 import { createCapturedRequestFromHarEntry } from "../lib/request-model";
+import { redactCapturedRequest, redactEndpointGroups } from "../lib/redaction";
 import { groupRequests } from "../lib/request-model";
 import { clearCapturedRequests, loadCapturedRequests, saveCapturedRequests } from "../lib/storage";
 import type { CapturedRequest, EndpointGroup } from "../lib/types";
@@ -100,10 +101,11 @@ export function App() {
     }
   }, [selectedGroup, selectedGroupId]);
 
+  const redactedFilteredGroups = useMemo(() => redactEndpointGroups(filteredGroups), [filteredGroups]);
   const openApiJson = useMemo(() => {
-    return JSON.stringify(buildOpenApiDocument(filteredGroups), null, 2);
-  }, [filteredGroups]);
-  const markdownReport = useMemo(() => buildMarkdownReport(filteredGroups), [filteredGroups]);
+    return JSON.stringify(buildOpenApiDocument(redactedFilteredGroups), null, 2);
+  }, [redactedFilteredGroups]);
+  const markdownReport = useMemo(() => buildMarkdownReport(redactedFilteredGroups), [redactedFilteredGroups]);
 
   async function copyOpenApi() {
     await navigator.clipboard.writeText(openApiJson);
@@ -325,7 +327,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 }
 
 function EndpointDetail({ group }: { group: EndpointGroup }) {
-  const sample = group.samples[0];
+  const sample = group.samples[0] ? redactCapturedRequest(group.samples[0]) : undefined;
 
   return (
     <>
