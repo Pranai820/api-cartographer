@@ -3,10 +3,7 @@
 ## Ready
 
 - Add endpoint detail tabs for samples, schema, and export preview.
-- Add sensitive header redaction before rendering and exporting.
-- Add named capture sessions.
 - Add HAR file import.
-- Add endpoint ignore and pin controls.
 - Add OpenAPI title and version controls.
 - Add extension icon assets.
 - Add release packaging script.
@@ -22,6 +19,9 @@
 
 ## Done
 
+- Added named capture sessions with save, restore, and delete.
+- Added sensitive header redaction before rendering and exporting.
+- Added endpoint ignore and pin controls.
 - Added multi-sample schema merging for OpenAPI request and response bodies.
 - Added Markdown report export.
 - Added status/method/content-type filter presets.

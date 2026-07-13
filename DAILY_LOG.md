@@ -1,5 +1,13 @@
 # Daily Log
 
+## 2026-07-13
+
+- Added sensitive header redaction before rendering and exporting captured requests.
+- Added endpoint pin and ignore controls to the DevTools panel.
+- Added named capture sessions (save, restore, delete) with `chrome.storage.local` persistence.
+- Updated backlog status for completed work.
+- Checks run: `npm run build`, `npm test`, `npm audit --audit-level=moderate`.
+
 ## 2026-07-12
 
 - Used `api-cartographer-work` selector: 4 commits for the day.
