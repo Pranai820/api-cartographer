@@ -3,8 +3,6 @@
 ## Ready
 
 - Add endpoint detail tabs for samples, schema, and export preview.
-- Add HAR file import.
-- Add OpenAPI title and version controls.
 - Add extension icon assets.
 - Add release packaging script.
 - Add Playwright or Puppeteer extension smoke test.
@@ -19,6 +17,8 @@
 
 ## Done
 
+- Added HAR file import.
+- Added OpenAPI title and version controls.
 - Added named capture sessions with save, restore, and delete.
 - Added sensitive header redaction before rendering and exporting.
 - Added endpoint ignore and pin controls.

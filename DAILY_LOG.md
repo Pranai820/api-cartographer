@@ -1,5 +1,12 @@
 # Daily Log
 
+## 2026-07-14
+
+- Added OpenAPI title and version controls to the export panel.
+- Added HAR file import (parses a HAR log's entries into captured requests, merged with live capture).
+- Updated backlog status for completed work.
+- Checks run: `npm run build`, `npm test`, `npm audit --audit-level=moderate`.
+
 ## 2026-07-13
 
 - Added sensitive header redaction before rendering and exporting captured requests.
