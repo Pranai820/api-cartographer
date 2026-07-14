@@ -16,9 +16,10 @@ import {
   RotateCcw,
   Save,
   Search,
-  Trash2
+  Trash2,
+  Upload
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   applyEndpointPreferences,
   EMPTY_ENDPOINT_PREFERENCES,
@@ -32,7 +33,7 @@ import { filterEndpointGroups, listContentTypes, listMethods, listStatusCodes } 
 import { formatDuration, formatStatusCounts } from "../lib/format";
 import { buildMarkdownReport } from "../lib/markdown-report";
 import { buildOpenApiDocument } from "../lib/openapi";
-import { createCapturedRequestFromHarEntry } from "../lib/request-model";
+import { createCapturedRequestFromHarEntry, parseHarLog } from "../lib/request-model";
 import { redactCapturedRequest, redactEndpointGroups } from "../lib/redaction";
 import { groupRequests } from "../lib/request-model";
 import { createCaptureSession, deleteCaptureSession, upsertCaptureSession, type CaptureSession } from "../lib/sessions";
@@ -68,6 +69,7 @@ export function App() {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [lastExportStatus, setLastExportStatus] = useState<string>("idle");
   const listenerAttached = useRef(false);
+  const harInputRef = useRef<HTMLInputElement>(null);
   const isCapturingRef = useRef(isCapturing);
 
   useEffect(() => {
@@ -208,6 +210,29 @@ export function App() {
 
   function removeSession(sessionId: string) {
     setSessions((current) => deleteCaptureSession(current, sessionId));
+  }
+
+  async function importHarFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      const imported = parseHarLog(JSON.parse(await file.text()));
+
+      if (!imported.length) {
+        setLastExportStatus("HAR import found no entries");
+        return;
+      }
+
+      setRequests((current) => [...current, ...imported].slice(-500));
+      setLastExportStatus(`HAR imported: ${imported.length} request(s)`);
+    } catch {
+      setLastExportStatus("HAR import failed: invalid file");
+    }
   }
 
   async function resetCapture() {
@@ -358,6 +383,23 @@ export function App() {
                 ))}
               </div>
             ) : null}
+          </div>
+          <div className="export-block">
+            <p className="block-title">
+              <Upload size={15} />
+              Import
+            </p>
+            <input
+              ref={harInputRef}
+              type="file"
+              accept=".har,application/json"
+              hidden
+              onChange={importHarFile}
+            />
+            <button className="button button-full" type="button" onClick={() => harInputRef.current?.click()}>
+              <Upload size={16} />
+              Import HAR File
+            </button>
           </div>
           <div className="export-block">
             <p className="block-title">

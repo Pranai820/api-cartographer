@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createCapturedRequestFromHarEntry, groupRequests, normalizePath } from "../src/lib/request-model";
+import { createCapturedRequestFromHarEntry, groupRequests, normalizePath, parseHarLog } from "../src/lib/request-model";
 
 vi.stubGlobal("crypto", {
   randomUUID: () => "request-id"
@@ -54,5 +54,36 @@ describe("request model", () => {
     expect(groups[0].count).toBe(2);
     expect(groups[0].statusCounts).toEqual({ "200": 1, "404": 1 });
     expect(groups[0].averageDurationMs).toBe(20);
+  });
+
+  it("parses a HAR file's log entries into captured requests", () => {
+    const har = {
+      log: {
+        entries: [
+          {
+            request: { method: "GET", url: "https://api.example.com/users/9" },
+            response: { status: 200, content: { text: "{\"id\":9}", mimeType: "application/json" } },
+            startedDateTime: "2026-07-14T00:00:00.000Z",
+            time: 12
+          },
+          { request: { method: "GET" } },
+          "not-an-entry"
+        ]
+      }
+    };
+
+    const requests = parseHarLog(har);
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0]).toMatchObject({
+      pathTemplate: "/users/{id}",
+      responseBody: "{\"id\":9}"
+    });
+  });
+
+  it("returns no requests for non-HAR input", () => {
+    expect(parseHarLog({})).toEqual([]);
+    expect(parseHarLog(null)).toEqual([]);
+    expect(parseHarLog({ log: { entries: "nope" } })).toEqual([]);
   });
 });

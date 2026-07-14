@@ -26,6 +26,8 @@ export interface HarEntryLike {
     headers?: HarHeader[];
     content?: {
       mimeType?: string;
+      text?: string;
+      encoding?: string;
     };
   };
   startedDateTime?: string;
@@ -102,6 +104,48 @@ export function createCapturedRequestFromHarEntry(
     responseBody,
     responseContentEncoding
   };
+}
+
+function isHarEntryLike(value: unknown): value is HarEntryLike {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const entry = value as Record<string, unknown>;
+  const request = entry.request as Record<string, unknown> | undefined;
+  const response = entry.response as Record<string, unknown> | undefined;
+
+  return Boolean(
+    request &&
+      typeof request.method === "string" &&
+      typeof request.url === "string" &&
+      response &&
+      typeof response.status === "number"
+  );
+}
+
+export function parseHarLog(value: unknown): CapturedRequest[] {
+  const entries = (value as { log?: { entries?: unknown } } | undefined)?.log?.entries;
+
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+
+  const requests: CapturedRequest[] = [];
+
+  for (const entry of entries) {
+    if (!isHarEntryLike(entry)) {
+      continue;
+    }
+
+    try {
+      requests.push(createCapturedRequestFromHarEntry(entry, entry.response.content?.text, entry.response.content?.encoding));
+    } catch {
+      continue;
+    }
+  }
+
+  return requests;
 }
 
 export function groupRequests(requests: CapturedRequest[], maxSamplesPerGroup = 3): EndpointGroup[] {
