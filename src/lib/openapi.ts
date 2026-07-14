@@ -200,7 +200,11 @@ function buildJsonContent(samples: CapturedRequest[], selectBody: (sample: Captu
   };
 }
 
-export function buildOpenApiDocument(groups: EndpointGroup[], title = "Captured API"): OpenApiDocument {
+export function buildOpenApiDocument(
+  groups: EndpointGroup[],
+  title = "Captured API",
+  version = "0.1.0"
+): OpenApiDocument {
   const servers = unique(groups.map((group) => group.origin)).map((url) => ({ url }));
   const paths: OpenApiDocument["paths"] = {};
 
@@ -240,7 +244,7 @@ export function buildOpenApiDocument(groups: EndpointGroup[], title = "Captured 
     openapi: "3.1.0",
     info: {
       title,
-      version: "0.1.0",
+      version,
       description: "Generated from browser DevTools network traffic by API Cartographer."
     },
     servers,

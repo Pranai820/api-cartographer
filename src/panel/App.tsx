@@ -63,6 +63,8 @@ export function App() {
   const [endpointPreferences, setEndpointPreferences] = useState<EndpointPreferences>(EMPTY_ENDPOINT_PREFERENCES);
   const [sessionName, setSessionName] = useState("Untitled capture");
   const [sessions, setSessions] = useState<CaptureSession[]>([]);
+  const [openApiTitle, setOpenApiTitle] = useState("Captured API");
+  const [openApiVersion, setOpenApiVersion] = useState("0.1.0");
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [lastExportStatus, setLastExportStatus] = useState<string>("idle");
   const listenerAttached = useRef(false);
@@ -147,8 +149,8 @@ export function App() {
 
   const redactedFilteredGroups = useMemo(() => redactEndpointGroups(filteredGroups), [filteredGroups]);
   const openApiJson = useMemo(() => {
-    return JSON.stringify(buildOpenApiDocument(redactedFilteredGroups), null, 2);
-  }, [redactedFilteredGroups]);
+    return JSON.stringify(buildOpenApiDocument(redactedFilteredGroups, openApiTitle, openApiVersion), null, 2);
+  }, [redactedFilteredGroups, openApiTitle, openApiVersion]);
   const markdownReport = useMemo(() => buildMarkdownReport(redactedFilteredGroups), [redactedFilteredGroups]);
 
   async function copyOpenApi() {
@@ -362,6 +364,18 @@ export function App() {
               <Braces size={15} />
               OpenAPI
             </p>
+            <input
+              id="openapi-title"
+              value={openApiTitle}
+              onChange={(event) => setOpenApiTitle(event.target.value)}
+              placeholder="API title"
+            />
+            <input
+              id="openapi-version"
+              value={openApiVersion}
+              onChange={(event) => setOpenApiVersion(event.target.value)}
+              placeholder="Version"
+            />
             <button className="button button-full" type="button" onClick={copyOpenApi}>
               <CheckCircle2 size={16} />
               Copy JSON

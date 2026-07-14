@@ -40,11 +40,35 @@ describe("OpenAPI export", () => {
 
     expect(doc.openapi).toBe("3.1.0");
     expect(doc.servers).toEqual([{ url: "https://api.example.com" }]);
+    expect(doc.info).toMatchObject({ title: "Example API", version: "0.1.0" });
     expect(doc.paths["/users/{id}"].get).toMatchObject({
       summary: "GET /users/{id}",
       "x-api-cartographer": {
         observedCount: 2
       }
+    });
+  });
+
+  it("accepts a custom title and version", () => {
+    const groups: EndpointGroup[] = [
+      {
+        id: "GET https://api.example.com/users/{id}",
+        origin: "https://api.example.com",
+        method: "GET",
+        pathTemplate: "/users/{id}",
+        count: 1,
+        lastSeen: "2026-07-14T00:00:00.000Z",
+        statusCounts: { "200": 1 },
+        samples: [sampleRequest({})]
+      }
+    ];
+
+    const doc = buildOpenApiDocument(groups, "Internal Billing API", "2.3.1");
+
+    expect(doc.info).toEqual({
+      title: "Internal Billing API",
+      version: "2.3.1",
+      description: "Generated from browser DevTools network traffic by API Cartographer."
     });
   });
 
