@@ -1,5 +1,12 @@
 # Daily Log
 
+## 2026-07-19
+
+- Added endpoint detail tabs (Samples, Schema, Export Preview) to the DevTools panel, backed by a new `src/lib/endpoint-detail.ts` module that derives per-endpoint request/response JSON schemas and the OpenAPI operation from `buildOpenApiDocument`.
+- Added a release packaging script (`npm run package`): builds the extension and zips `dist/` into `release/api-cartographer-v<version>.zip` using a small dependency-free ZIP writer (`scripts/zip.mjs`), verified against a real `unzip` tool and covered by round-trip tests.
+- Updated backlog status for completed work.
+- Checks run: `npm run build`, `npm test`, `npm audit --audit-level=moderate`.
+
 ## 2026-07-14
 
 - Added OpenAPI title and version controls to the export panel.

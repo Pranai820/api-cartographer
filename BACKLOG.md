@@ -2,9 +2,7 @@
 
 ## Ready
 
-- Add endpoint detail tabs for samples, schema, and export preview.
 - Add extension icon assets.
-- Add release packaging script.
 - Add Playwright or Puppeteer extension smoke test.
 
 ## Later
@@ -17,6 +15,8 @@
 
 ## Done
 
+- Added endpoint detail tabs for samples, schema, and export preview.
+- Added release packaging script.
 - Added HAR file import.
 - Added OpenAPI title and version controls.
 - Added named capture sessions with save, restore, and delete.
