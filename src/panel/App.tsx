@@ -29,6 +29,7 @@ import {
   togglePinned,
   type EndpointPreferences
 } from "../lib/endpoint-preferences";
+import { buildEndpointOperation, extractRequestSchema, extractResponseSchemas } from "../lib/endpoint-detail";
 import { filterEndpointGroups, listContentTypes, listMethods, listStatusCodes } from "../lib/filters";
 import { formatDuration, formatStatusCounts } from "../lib/format";
 import { buildMarkdownReport } from "../lib/markdown-report";
@@ -497,7 +498,11 @@ export function App() {
         </section>
 
         <section className="detail-panel" aria-label="Endpoint details">
-          {selectedGroup ? <EndpointDetail group={selectedGroup} /> : <div className="empty-state">No endpoint selected.</div>}
+          {selectedGroup ? (
+            <EndpointDetail group={selectedGroup} openApiTitle={openApiTitle} openApiVersion={openApiVersion} />
+          ) : (
+            <div className="empty-state">No endpoint selected.</div>
+          )}
         </section>
       </section>
     </main>
@@ -513,8 +518,31 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function EndpointDetail({ group }: { group: EndpointGroup }) {
+type DetailTab = "samples" | "schema" | "export";
+
+const DETAIL_TABS: Array<{ id: DetailTab; label: string }> = [
+  { id: "samples", label: "Samples" },
+  { id: "schema", label: "Schema" },
+  { id: "export", label: "Export Preview" }
+];
+
+function EndpointDetail({
+  group,
+  openApiTitle,
+  openApiVersion
+}: {
+  group: EndpointGroup;
+  openApiTitle: string;
+  openApiVersion: string;
+}) {
+  const [activeTab, setActiveTab] = useState<DetailTab>("samples");
   const sample = group.samples[0] ? redactCapturedRequest(group.samples[0]) : undefined;
+  const operation = useMemo(
+    () => buildEndpointOperation(group, openApiTitle, openApiVersion),
+    [group, openApiTitle, openApiVersion]
+  );
+  const requestSchema = useMemo(() => extractRequestSchema(operation), [operation]);
+  const responseSchemas = useMemo(() => extractResponseSchemas(operation), [operation]);
 
   return (
     <>
@@ -545,15 +573,64 @@ function EndpointDetail({ group }: { group: EndpointGroup }) {
         </div>
       </dl>
 
-      <div className="sample-block">
-        <h3>Request Headers</h3>
-        <HeaderList headers={sample?.requestHeaders ?? []} />
+      <div className="detail-tabs" role="tablist" aria-label="Endpoint detail views">
+        {DETAIL_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            role="tab"
+            type="button"
+            aria-selected={activeTab === tab.id}
+            className={activeTab === tab.id ? "detail-tab detail-tab-active" : "detail-tab"}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      <div className="sample-block">
-        <h3>Response Sample</h3>
-        <pre>{sample?.responseBody ? sample.responseBody.slice(0, 2400) : "No response body captured."}</pre>
-      </div>
+      {activeTab === "samples" ? (
+        <>
+          <div className="sample-block">
+            <h3>Request Headers</h3>
+            <HeaderList headers={sample?.requestHeaders ?? []} />
+          </div>
+
+          <div className="sample-block">
+            <h3>Response Sample</h3>
+            <pre>{sample?.responseBody ? sample.responseBody.slice(0, 2400) : "No response body captured."}</pre>
+          </div>
+        </>
+      ) : null}
+
+      {activeTab === "schema" ? (
+        <>
+          <div className="sample-block">
+            <h3>Request Schema</h3>
+            <pre>{requestSchema ? JSON.stringify(requestSchema, null, 2) : "No request schema inferred."}</pre>
+          </div>
+
+          <div className="sample-block">
+            <h3>Response Schemas</h3>
+            {responseSchemas.length ? (
+              responseSchemas.map((entry) => (
+                <div key={entry.status}>
+                  <p className="subtle">Status {entry.status}</p>
+                  <pre>{JSON.stringify(entry.schema, null, 2)}</pre>
+                </div>
+              ))
+            ) : (
+              <pre>No response schema inferred.</pre>
+            )}
+          </div>
+        </>
+      ) : null}
+
+      {activeTab === "export" ? (
+        <div className="sample-block">
+          <h3>OpenAPI Operation</h3>
+          <pre>{operation ? JSON.stringify(operation, null, 2) : "No operation generated."}</pre>
+        </div>
+      ) : null}
     </>
   );
 }

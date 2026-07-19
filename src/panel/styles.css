@@ -412,6 +412,33 @@ dd {
   white-space: nowrap;
 }
 
+.detail-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #dfe4dc;
+}
+
+.detail-tab {
+  height: 32px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #687166;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 0 10px;
+}
+
+.detail-tab:hover {
+  color: #20201d;
+}
+
+.detail-tab-active {
+  border-bottom-color: #2d8b76;
+  color: #126752;
+}
+
 .sample-block {
   display: grid;
   gap: 8px;
