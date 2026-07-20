@@ -1,5 +1,12 @@
 # Daily Log
 
+## 2026-07-20
+
+- Added extension icon assets: a 16/32/48/128px network-graph mark in brand teal, rendered by a new dependency-free PNG encoder (`scripts/png.mjs`, `scripts/generate-icons.mjs`) and wired into `manifest.json` icons/action.default_icon.
+- Added a Playwright extension smoke test (`npm run smoke`): builds `dist/`, loads it into headless Chromium via `--load-extension`, and asserts the popup and DevTools panel render expected content with no console errors. Confirmed it catches real regressions by temporarily breaking the panel heading and watching the test fail, then pass again after reverting.
+- Cleared the `Ready` backlog section; both remaining items are done.
+- Checks run: `npm run build`, `npm test`, `npm audit --audit-level=moderate`, `npm run smoke`.
+
 ## 2026-07-19
 
 - Added endpoint detail tabs (Samples, Schema, Export Preview) to the DevTools panel, backed by a new `src/lib/endpoint-detail.ts` module that derives per-endpoint request/response JSON schemas and the OpenAPI operation from `buildOpenApiDocument`.

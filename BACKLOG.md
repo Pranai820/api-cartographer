@@ -2,9 +2,6 @@
 
 ## Ready
 
-- Add extension icon assets.
-- Add Playwright or Puppeteer extension smoke test.
-
 ## Later
 
 - Add optional AI endpoint summaries.
@@ -15,6 +12,8 @@
 
 ## Done
 
+- Added a Playwright extension smoke test.
+- Added extension icon assets.
 - Added endpoint detail tabs for samples, schema, and export preview.
 - Added release packaging script.
 - Added HAR file import.
