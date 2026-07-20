@@ -26,6 +26,18 @@ Load the extension from `dist`:
 4. Select this repo's `dist` folder.
 5. Open DevTools on any page and select the API Cartographer panel.
 
+## Smoke Test
+
+`npm run smoke` builds the extension, loads it into a real headless
+Chromium via Playwright, and checks that the popup and DevTools panel
+render without console errors. It downloads a browser binary the first
+time:
+
+```powershell
+npx playwright install chromium
+npm run smoke
+```
+
 ## Project Automation
 
 Daily project work is driven by the `api-cartographer-work` Codex skill. Each run should pick 2-4 roadmap tasks, make meaningful commits, verify the touched surface, and push to GitHub.
