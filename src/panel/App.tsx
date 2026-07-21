@@ -1,6 +1,7 @@
 import {
   Braces,
   CheckCircle2,
+  Database,
   Download,
   Eye,
   EyeOff,
@@ -34,6 +35,7 @@ import { filterEndpointGroups, listContentTypes, listMethods, listStatusCodes } 
 import { formatDuration, formatStatusCounts } from "../lib/format";
 import { buildMarkdownReport } from "../lib/markdown-report";
 import { buildOpenApiDocument } from "../lib/openapi";
+import { buildProjectDataExport, parseProjectDataImport } from "../lib/project-data";
 import { createCapturedRequestFromHarEntry, parseHarLog } from "../lib/request-model";
 import { redactCapturedRequest, redactEndpointGroups } from "../lib/redaction";
 import { groupRequests } from "../lib/request-model";
@@ -71,6 +73,7 @@ export function App() {
   const [lastExportStatus, setLastExportStatus] = useState<string>("idle");
   const listenerAttached = useRef(false);
   const harInputRef = useRef<HTMLInputElement>(null);
+  const projectDataInputRef = useRef<HTMLInputElement>(null);
   const isCapturingRef = useRef(isCapturing);
 
   useEffect(() => {
@@ -241,6 +244,37 @@ export function App() {
     await clearCapturedRequests();
   }
 
+  function exportProjectData() {
+    const projectData = buildProjectDataExport({ requests, sessions, endpointPreferences });
+    const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "api-cartographer-project.json";
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setLastExportStatus("Project data exported");
+  }
+
+  async function importProjectDataFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      const snapshot = parseProjectDataImport(JSON.parse(await file.text()));
+      setRequests(snapshot.requests);
+      setSessions(snapshot.sessions);
+      setEndpointPreferences(snapshot.endpointPreferences);
+      setLastExportStatus(`Project data imported: ${snapshot.requests.length} request(s), ${snapshot.sessions.length} session(s)`);
+    } catch {
+      setLastExportStatus("Project data import failed: invalid file");
+    }
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -401,6 +435,28 @@ export function App() {
               <Upload size={16} />
               Import HAR File
             </button>
+          </div>
+          <div className="export-block">
+            <p className="block-title">
+              <Database size={15} />
+              Project Data
+            </p>
+            <input
+              ref={projectDataInputRef}
+              type="file"
+              accept="application/json"
+              hidden
+              onChange={importProjectDataFile}
+            />
+            <button className="button button-full" type="button" onClick={exportProjectData} disabled={!requests.length && !sessions.length}>
+              <Download size={16} />
+              Export Project Data
+            </button>
+            <button className="button button-full" type="button" onClick={() => projectDataInputRef.current?.click()}>
+              <Upload size={16} />
+              Import Project Data
+            </button>
+            <p className="subtle">Backup/restore only: replaces current requests, sessions, and preferences with unredacted data from the file.</p>
           </div>
           <div className="export-block">
             <p className="block-title">
