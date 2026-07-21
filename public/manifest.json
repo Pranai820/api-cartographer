@@ -1,8 +1,10 @@
 {
   "manifest_version": 3,
   "name": "API Cartographer",
+  "short_name": "API Cartographer",
   "description": "Map live DevTools network traffic into endpoint docs and OpenAPI drafts.",
   "version": "0.1.0",
+  "homepage_url": "https://github.com/Pranai820/api-cartographer",
   "minimum_chrome_version": "114",
   "devtools_page": "devtools.html",
   "icons": {

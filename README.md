@@ -38,6 +38,12 @@ npx playwright install chromium
 npm run smoke
 ```
 
+## Privacy
+
+API Cartographer is local-first and makes no network requests of its
+own. See [PRIVACY.md](PRIVACY.md) for what's captured, where it's
+stored, and the default redaction rules.
+
 ## Project Automation
 
 Daily project work is driven by the `api-cartographer-work` Codex skill. Each run should pick 2-4 roadmap tasks, make meaningful commits, verify the touched surface, and push to GitHub.
