@@ -1,5 +1,13 @@
 # Daily Log
 
+## 2026-07-21
+
+- Added project data export/import: a new `src/lib/project-data.ts` bundles captured requests, saved sessions, and endpoint preferences into one versioned JSON snapshot, with a matching Export/Import Project Data control in the panel sidebar (import replaces current state; malformed entries are dropped rather than throwing).
+- Added `PRIVACY.md` documenting local-only storage (no network requests anywhere in `src/`), the exact redaction defaults from `src/lib/redaction.ts`, and which paths (storage at rest, Project Data export) intentionally keep unredacted data for personal backup. Linked it from `README.md`.
+- Added `short_name` and `homepage_url` to `manifest.json` for store listing readiness.
+- Backlog `Ready` was empty, so pulled from `ROADMAP.md` Week 4; the two items not yet covered by this session (build-output integration tests, empty/loading/large-capture UI states) are now in `Ready` for next time.
+- Checks run: `npm run build`, `npm test`, `npm audit --audit-level=moderate`, `npm run smoke`.
+
 ## 2026-07-20
 
 - Added extension icon assets: a 16/32/48/128px network-graph mark in brand teal, rendered by a new dependency-free PNG encoder (`scripts/png.mjs`, `scripts/generate-icons.mjs`) and wired into `manifest.json` icons/action.default_icon.

@@ -2,6 +2,9 @@
 
 ## Ready
 
+- Add integration tests around build output.
+- Tighten UI states for empty, loading, and large captures.
+
 ## Later
 
 - Add optional AI endpoint summaries.
@@ -12,6 +15,8 @@
 
 ## Done
 
+- Added privacy documentation and store-ready manifest metadata.
+- Added project data export/import (requests, sessions, preferences).
 - Added a Playwright extension smoke test.
 - Added extension icon assets.
 - Added endpoint detail tabs for samples, schema, and export preview.
