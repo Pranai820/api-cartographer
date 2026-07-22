@@ -2,9 +2,6 @@
 
 ## Ready
 
-- Add integration tests around build output.
-- Tighten UI states for empty, loading, and large captures.
-
 ## Later
 
 - Add optional AI endpoint summaries.
@@ -15,6 +12,9 @@
 
 ## Done
 
+- Added integration tests around build output.
+- Tightened empty, loading, and capture-limit UI states.
+- Added capture status helpers and unified the 500-request cap.
 - Added privacy documentation and store-ready manifest metadata.
 - Added project data export/import (requests, sessions, preferences).
 - Added a Playwright extension smoke test.

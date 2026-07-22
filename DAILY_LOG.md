@@ -1,5 +1,13 @@
 # Daily Log
 
+## 2026-07-22
+
+- Added `src/lib/capture-status.ts` (`isAtCaptureLimit`, `resolveEmptyStateReason`) and replaced the hardcoded `500` request-cap literal across `storage.ts`, `sessions.ts`, `project-data.ts`, and `App.tsx` with one shared `CAPTURED_REQUEST_LIMIT` constant.
+- Tightened UI states: a loading state while `chrome.storage.local` hydrates instead of flashing empty; the empty state now distinguishes "nothing captured yet" from "filters hid every endpoint" (with a working Clear Filters action, verified visually via Playwright screenshots and a scripted click-through); and a capture-limit banner once storage hits 500 requests.
+- Added `tests/build-output.test.ts`: runs a real `npm run build` and checks `dist/` has the required entry points and that `manifest.json`/HTML only reference files that exist. Caught and fixed a real bug in the process — running the build from inside vitest inherited `NODE_ENV=test`, silently producing a bloated dev-mode bundle (`jsx-dev-runtime`, ~2.3x larger) in `dist/`; fixed by forcing `NODE_ENV=production` for the nested build.
+- `ROADMAP.md` Week 4 (Polish and Release Prep) is now fully complete. Backlog `Ready` is empty again; there's no Week 5 yet, so next session should either pull from `BACKLOG.md`'s `Later` section or get new roadmap direction.
+- Checks run: `npm run build`, `npm test`, `npm audit --audit-level=moderate`, `npm run smoke`.
+
 ## 2026-07-21
 
 - Added project data export/import: a new `src/lib/project-data.ts` bundles captured requests, saved sessions, and endpoint preferences into one versioned JSON snapshot, with a matching Export/Import Project Data control in the panel sidebar (import replaces current state; malformed entries are dropped rather than throwing).
