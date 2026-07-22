@@ -72,6 +72,7 @@ export function App() {
   const [openApiVersion, setOpenApiVersion] = useState("0.1.0");
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [lastExportStatus, setLastExportStatus] = useState<string>("idle");
+  const [isHydrating, setIsHydrating] = useState(true);
   const listenerAttached = useRef(false);
   const harInputRef = useRef<HTMLInputElement>(null);
   const projectDataInputRef = useRef<HTMLInputElement>(null);
@@ -82,9 +83,11 @@ export function App() {
   }, [isCapturing]);
 
   useEffect(() => {
-    loadCapturedRequests().then(setRequests);
-    loadEndpointPreferences().then(setEndpointPreferences);
-    loadCaptureSessions().then(setSessions);
+    Promise.all([
+      loadCapturedRequests().then(setRequests),
+      loadEndpointPreferences().then(setEndpointPreferences),
+      loadCaptureSessions().then(setSessions)
+    ]).finally(() => setIsHydrating(false));
   }, []);
 
   useEffect(() => {
@@ -143,6 +146,8 @@ export function App() {
     [endpointPreferences, matchedGroups, showIgnored]
   );
   const hiddenIgnoredCount = matchedGroups.length - filteredGroups.length;
+  const emptyStateReason = resolveEmptyStateReason(requests.length, filteredGroups.length);
+  const atCaptureLimit = isAtCaptureLimit(requests.length);
 
   const selectedGroup = useMemo(() => {
     return filteredGroups.find((group) => group.id === selectedGroupId) ?? filteredGroups[0];
@@ -245,6 +250,15 @@ export function App() {
     await clearCapturedRequests();
   }
 
+  function clearFilters() {
+    setFilter("");
+    setOriginFilter("all");
+    setMethodFilter("all");
+    setStatusFilter("all");
+    setContentTypeFilter("all");
+    setShowIgnored(false);
+  }
+
   function exportProjectData() {
     const projectData = buildProjectDataExport({ requests, sessions, endpointPreferences });
     const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: "application/json" });
@@ -307,260 +321,284 @@ export function App() {
         <Metric label="Hidden" value={hiddenIgnoredCount.toString()} />
       </section>
 
+      {atCaptureLimit ? (
+        <p className="capture-limit-banner">
+          At the {CAPTURED_REQUEST_LIMIT}-request storage limit — oldest requests are dropped as new ones arrive.
+        </p>
+      ) : null}
+
       <section className="workspace">
-        <aside className="filters-panel">
-          <div className="control-block">
-            <label htmlFor="endpoint-search">
-              <Search size={15} />
-              Search
-            </label>
-            <input
-              id="endpoint-search"
-              value={filter}
-              onChange={(event) => setFilter(event.target.value)}
-              placeholder="method, origin, path"
-            />
+        {isHydrating ? (
+          <div className="empty-state workspace-loading">
+            <RefreshCw size={18} className="spin-icon" />
+            <span>Loading captured data…</span>
           </div>
-
-          <div className="control-block">
-            <label htmlFor="origin-filter">
-              <Globe2 size={15} />
-              Origin
-            </label>
-            <select id="origin-filter" value={originFilter} onChange={(event) => setOriginFilter(event.target.value)}>
-              <option value="all">All origins</option>
-              {origins.map((origin) => (
-                <option key={origin} value={origin}>
-                  {origin}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="control-block">
-            <label htmlFor="method-filter">
-              <Filter size={15} />
-              Method
-            </label>
-            <select id="method-filter" value={methodFilter} onChange={(event) => setMethodFilter(event.target.value)}>
-              <option value="all">All methods</option>
-              {methods.map((method) => (
-                <option key={method} value={method}>
-                  {method}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="control-block">
-            <label htmlFor="status-filter">
-              <CheckCircle2 size={15} />
-              Status
-            </label>
-            <select id="status-filter" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-              <option value="all">All statuses</option>
-              {statusCodes.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="control-block">
-            <label htmlFor="content-type-filter">
-              <FileText size={15} />
-              Content Type
-            </label>
-            <select
-              id="content-type-filter"
-              value={contentTypeFilter}
-              onChange={(event) => setContentTypeFilter(event.target.value)}
-            >
-              <option value="all">All content types</option>
-              {contentTypes.map((contentType) => (
-                <option key={contentType} value={contentType}>
-                  {contentType}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button className="button button-full" type="button" onClick={() => setShowIgnored((value) => !value)}>
-            {showIgnored ? <EyeOff size={16} /> : <Eye size={16} />}
-            {showIgnored ? "Hide Ignored" : "Show Ignored"}
-          </button>
-
-          <div className="session-block">
-            <p className="block-title">
-              <FolderOpen size={15} />
-              Sessions
-            </p>
-            <input
-              id="session-name"
-              value={sessionName}
-              onChange={(event) => setSessionName(event.target.value)}
-              placeholder="Capture name"
-            />
-            <button className="button button-full" type="button" onClick={saveCurrentSession} disabled={!requests.length}>
-              <Save size={16} />
-              Save Session
-            </button>
-            {sessions.length ? (
-              <div className="session-list">
-                {sessions.slice(0, 4).map((session) => (
-                  <div className="session-row" key={session.id}>
-                    <button className="session-restore" type="button" onClick={() => restoreSession(session)} title="Restore session">
-                      <RotateCcw size={14} />
-                      <span>{session.name}</span>
-                    </button>
-                    <button className="endpoint-action" type="button" onClick={() => removeSession(session.id)} title="Delete session">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-          <div className="export-block">
-            <p className="block-title">
-              <Upload size={15} />
-              Import
-            </p>
-            <input
-              ref={harInputRef}
-              type="file"
-              accept=".har,application/json"
-              hidden
-              onChange={importHarFile}
-            />
-            <button className="button button-full" type="button" onClick={() => harInputRef.current?.click()}>
-              <Upload size={16} />
-              Import HAR File
-            </button>
-          </div>
-          <div className="export-block">
-            <p className="block-title">
-              <Database size={15} />
-              Project Data
-            </p>
-            <input
-              ref={projectDataInputRef}
-              type="file"
-              accept="application/json"
-              hidden
-              onChange={importProjectDataFile}
-            />
-            <button className="button button-full" type="button" onClick={exportProjectData} disabled={!requests.length && !sessions.length}>
-              <Download size={16} />
-              Export Project Data
-            </button>
-            <button className="button button-full" type="button" onClick={() => projectDataInputRef.current?.click()}>
-              <Upload size={16} />
-              Import Project Data
-            </button>
-            <p className="subtle">Backup/restore only: replaces current requests, sessions, and preferences with unredacted data from the file.</p>
-          </div>
-          <div className="export-block">
-            <p className="block-title">
-              <Braces size={15} />
-              OpenAPI
-            </p>
-            <input
-              id="openapi-title"
-              value={openApiTitle}
-              onChange={(event) => setOpenApiTitle(event.target.value)}
-              placeholder="API title"
-            />
-            <input
-              id="openapi-version"
-              value={openApiVersion}
-              onChange={(event) => setOpenApiVersion(event.target.value)}
-              placeholder="Version"
-            />
-            <button className="button button-full" type="button" onClick={copyOpenApi}>
-              <CheckCircle2 size={16} />
-              Copy JSON
-            </button>
-            <button className="button button-full" type="button" onClick={downloadOpenApi}>
-              <Download size={16} />
-              Download JSON
-            </button>
-            <button className="button button-full" type="button" onClick={copyMarkdownReport}>
-              <FileText size={16} />
-              Copy Markdown
-            </button>
-            <button className="button button-full" type="button" onClick={downloadMarkdownReport}>
-              <Download size={16} />
-              Download MD
-            </button>
-            {lastExportStatus !== "idle" ? <p className="subtle">Last export: {lastExportStatus}.</p> : null}
-          </div>
-        </aside>
-
-        <section className="endpoint-list" aria-label="Endpoint groups">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Observed</p>
-              <h2>Endpoints</h2>
+        ) : (
+          <>
+          <aside className="filters-panel">
+            <div className="control-block">
+              <label htmlFor="endpoint-search">
+                <Search size={15} />
+                Search
+              </label>
+              <input
+                id="endpoint-search"
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+                placeholder="method, origin, path"
+              />
             </div>
-            <Filter size={18} />
-          </div>
-
-          {filteredGroups.length ? (
-            <div className="endpoint-table">
-              {filteredGroups.map((group) => {
-                const pinned = isPinned(endpointPreferences, group.id);
-                const ignored = isIgnored(endpointPreferences, group.id);
-
-                return (
-                  <div
-                    className={`endpoint-row${group.id === selectedGroup?.id ? " endpoint-row-selected" : ""}${
-                      pinned ? " endpoint-row-pinned" : ""
-                    }${ignored ? " endpoint-row-ignored" : ""}`}
-                    key={group.id}
-                  >
-                    <button className="endpoint-row-main" type="button" onClick={() => setSelectedGroupId(group.id)}>
-                      <span className={`method method-${group.method.toLowerCase()}`}>{group.method}</span>
-                      <span className="endpoint-path">{group.pathTemplate}</span>
-                      <span className="endpoint-origin">{group.origin}</span>
-                      <span className="endpoint-count">{group.count}</span>
-                    </button>
-                    <div className="endpoint-actions">
-                      <button
-                        className="endpoint-action"
-                        type="button"
-                        onClick={() => toggleEndpointPin(group.id)}
-                        title={pinned ? "Unpin endpoint" : "Pin endpoint"}
-                      >
-                        {pinned ? <PinOff size={15} /> : <Pin size={15} />}
+  
+            <div className="control-block">
+              <label htmlFor="origin-filter">
+                <Globe2 size={15} />
+                Origin
+              </label>
+              <select id="origin-filter" value={originFilter} onChange={(event) => setOriginFilter(event.target.value)}>
+                <option value="all">All origins</option>
+                {origins.map((origin) => (
+                  <option key={origin} value={origin}>
+                    {origin}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="control-block">
+              <label htmlFor="method-filter">
+                <Filter size={15} />
+                Method
+              </label>
+              <select id="method-filter" value={methodFilter} onChange={(event) => setMethodFilter(event.target.value)}>
+                <option value="all">All methods</option>
+                {methods.map((method) => (
+                  <option key={method} value={method}>
+                    {method}
+                  </option>
+                ))}
+              </select>
+            </div>
+  
+            <div className="control-block">
+              <label htmlFor="status-filter">
+                <CheckCircle2 size={15} />
+                Status
+              </label>
+              <select id="status-filter" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value="all">All statuses</option>
+                {statusCodes.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </div>
+  
+            <div className="control-block">
+              <label htmlFor="content-type-filter">
+                <FileText size={15} />
+                Content Type
+              </label>
+              <select
+                id="content-type-filter"
+                value={contentTypeFilter}
+                onChange={(event) => setContentTypeFilter(event.target.value)}
+              >
+                <option value="all">All content types</option>
+                {contentTypes.map((contentType) => (
+                  <option key={contentType} value={contentType}>
+                    {contentType}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button className="button button-full" type="button" onClick={() => setShowIgnored((value) => !value)}>
+              {showIgnored ? <EyeOff size={16} /> : <Eye size={16} />}
+              {showIgnored ? "Hide Ignored" : "Show Ignored"}
+            </button>
+  
+            <div className="session-block">
+              <p className="block-title">
+                <FolderOpen size={15} />
+                Sessions
+              </p>
+              <input
+                id="session-name"
+                value={sessionName}
+                onChange={(event) => setSessionName(event.target.value)}
+                placeholder="Capture name"
+              />
+              <button className="button button-full" type="button" onClick={saveCurrentSession} disabled={!requests.length}>
+                <Save size={16} />
+                Save Session
+              </button>
+              {sessions.length ? (
+                <div className="session-list">
+                  {sessions.slice(0, 4).map((session) => (
+                    <div className="session-row" key={session.id}>
+                      <button className="session-restore" type="button" onClick={() => restoreSession(session)} title="Restore session">
+                        <RotateCcw size={14} />
+                        <span>{session.name}</span>
                       </button>
-                      <button
-                        className="endpoint-action"
-                        type="button"
-                        onClick={() => toggleEndpointIgnore(group.id)}
-                        title={ignored ? "Restore endpoint" : "Ignore endpoint"}
-                      >
-                        {ignored ? <Eye size={15} /> : <EyeOff size={15} />}
+                      <button className="endpoint-action" type="button" onClick={() => removeSession(session.id)} title="Delete session">
+                        <Trash2 size={14} />
                       </button>
                     </div>
-                  </div>
-                );
-              })}
+                  ))}
+                </div>
+              ) : null}
             </div>
-          ) : (
-            <div className="empty-state">
-              <RefreshCw size={18} />
-              <span>Open a page and use it while DevTools stays open.</span>
+            <div className="export-block">
+              <p className="block-title">
+                <Upload size={15} />
+                Import
+              </p>
+              <input
+                ref={harInputRef}
+                type="file"
+                accept=".har,application/json"
+                hidden
+                onChange={importHarFile}
+              />
+              <button className="button button-full" type="button" onClick={() => harInputRef.current?.click()}>
+                <Upload size={16} />
+                Import HAR File
+              </button>
             </div>
-          )}
-        </section>
-
-        <section className="detail-panel" aria-label="Endpoint details">
-          {selectedGroup ? (
-            <EndpointDetail group={selectedGroup} openApiTitle={openApiTitle} openApiVersion={openApiVersion} />
-          ) : (
-            <div className="empty-state">No endpoint selected.</div>
-          )}
-        </section>
+            <div className="export-block">
+              <p className="block-title">
+                <Database size={15} />
+                Project Data
+              </p>
+              <input
+                ref={projectDataInputRef}
+                type="file"
+                accept="application/json"
+                hidden
+                onChange={importProjectDataFile}
+              />
+              <button className="button button-full" type="button" onClick={exportProjectData} disabled={!requests.length && !sessions.length}>
+                <Download size={16} />
+                Export Project Data
+              </button>
+              <button className="button button-full" type="button" onClick={() => projectDataInputRef.current?.click()}>
+                <Upload size={16} />
+                Import Project Data
+              </button>
+              <p className="subtle">Backup/restore only: replaces current requests, sessions, and preferences with unredacted data from the file.</p>
+            </div>
+            <div className="export-block">
+              <p className="block-title">
+                <Braces size={15} />
+                OpenAPI
+              </p>
+              <input
+                id="openapi-title"
+                value={openApiTitle}
+                onChange={(event) => setOpenApiTitle(event.target.value)}
+                placeholder="API title"
+              />
+              <input
+                id="openapi-version"
+                value={openApiVersion}
+                onChange={(event) => setOpenApiVersion(event.target.value)}
+                placeholder="Version"
+              />
+              <button className="button button-full" type="button" onClick={copyOpenApi}>
+                <CheckCircle2 size={16} />
+                Copy JSON
+              </button>
+              <button className="button button-full" type="button" onClick={downloadOpenApi}>
+                <Download size={16} />
+                Download JSON
+              </button>
+              <button className="button button-full" type="button" onClick={copyMarkdownReport}>
+                <FileText size={16} />
+                Copy Markdown
+              </button>
+              <button className="button button-full" type="button" onClick={downloadMarkdownReport}>
+                <Download size={16} />
+                Download MD
+              </button>
+              {lastExportStatus !== "idle" ? <p className="subtle">Last export: {lastExportStatus}.</p> : null}
+            </div>
+          </aside>
+  
+          <section className="endpoint-list" aria-label="Endpoint groups">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Observed</p>
+                <h2>Endpoints</h2>
+              </div>
+              <Filter size={18} />
+            </div>
+  
+            {filteredGroups.length ? (
+              <div className="endpoint-table">
+                {filteredGroups.map((group) => {
+                  const pinned = isPinned(endpointPreferences, group.id);
+                  const ignored = isIgnored(endpointPreferences, group.id);
+  
+                  return (
+                    <div
+                      className={`endpoint-row${group.id === selectedGroup?.id ? " endpoint-row-selected" : ""}${
+                        pinned ? " endpoint-row-pinned" : ""
+                      }${ignored ? " endpoint-row-ignored" : ""}`}
+                      key={group.id}
+                    >
+                      <button className="endpoint-row-main" type="button" onClick={() => setSelectedGroupId(group.id)}>
+                        <span className={`method method-${group.method.toLowerCase()}`}>{group.method}</span>
+                        <span className="endpoint-path">{group.pathTemplate}</span>
+                        <span className="endpoint-origin">{group.origin}</span>
+                        <span className="endpoint-count">{group.count}</span>
+                      </button>
+                      <div className="endpoint-actions">
+                        <button
+                          className="endpoint-action"
+                          type="button"
+                          onClick={() => toggleEndpointPin(group.id)}
+                          title={pinned ? "Unpin endpoint" : "Pin endpoint"}
+                        >
+                          {pinned ? <PinOff size={15} /> : <Pin size={15} />}
+                        </button>
+                        <button
+                          className="endpoint-action"
+                          type="button"
+                          onClick={() => toggleEndpointIgnore(group.id)}
+                          title={ignored ? "Restore endpoint" : "Ignore endpoint"}
+                        >
+                          {ignored ? <Eye size={15} /> : <EyeOff size={15} />}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : emptyStateReason === "filtered-out" ? (
+              <div className="empty-state">
+                <Filter size={18} />
+                <span>No endpoints match the current filters.</span>
+                <button className="button" type="button" onClick={clearFilters}>
+                  <RotateCcw size={16} />
+                  Clear filters
+                </button>
+              </div>
+            ) : (
+              <div className="empty-state">
+                <RefreshCw size={18} />
+                <span>Open a page and use it while DevTools stays open.</span>
+              </div>
+            )}
+          </section>
+  
+          <section className="detail-panel" aria-label="Endpoint details">
+            {selectedGroup ? (
+              <EndpointDetail group={selectedGroup} openApiTitle={openApiTitle} openApiVersion={openApiVersion} />
+            ) : (
+              <div className="empty-state">No endpoint selected.</div>
+            )}
+          </section>
+          </>
+        )}
       </section>
     </main>
   );

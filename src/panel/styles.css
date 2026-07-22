@@ -365,6 +365,41 @@ select:focus {
   text-align: center;
 }
 
+.workspace-loading {
+  grid-column: 1 / -1;
+  min-height: 240px;
+  border: 0;
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin-icon {
+    animation: none;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.capture-limit-banner {
+  color: #8a5f00;
+  font-size: 12px;
+  font-weight: 700;
+  background: #fff5d9;
+  border-bottom: 1px solid #f0dfa8;
+  padding: 8px 20px;
+  margin: 0;
+}
+
 .status-pill {
   max-width: 220px;
   overflow: hidden;
