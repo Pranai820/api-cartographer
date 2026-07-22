@@ -1,3 +1,4 @@
+import { CAPTURED_REQUEST_LIMIT } from "./capture-status";
 import { EMPTY_ENDPOINT_PREFERENCES, normalizeEndpointPreferences, type EndpointPreferences } from "./endpoint-preferences";
 import { normalizeCaptureSessions, type CaptureSession } from "./sessions";
 import type { CapturedRequest } from "./types";
@@ -28,7 +29,7 @@ export async function saveCapturedRequests(requests: CapturedRequest[]): Promise
     return;
   }
 
-  await chrome.storage.local.set({ [REQUESTS_KEY]: requests.slice(-500) });
+  await chrome.storage.local.set({ [REQUESTS_KEY]: requests.slice(-CAPTURED_REQUEST_LIMIT) });
 }
 
 export async function clearCapturedRequests(): Promise<void> {

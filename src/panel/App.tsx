@@ -30,6 +30,7 @@ import {
   togglePinned,
   type EndpointPreferences
 } from "../lib/endpoint-preferences";
+import { CAPTURED_REQUEST_LIMIT, isAtCaptureLimit, resolveEmptyStateReason } from "../lib/capture-status";
 import { buildEndpointOperation, extractRequestSchema, extractResponseSchemas } from "../lib/endpoint-detail";
 import { filterEndpointGroups, listContentTypes, listMethods, listStatusCodes } from "../lib/filters";
 import { formatDuration, formatStatusCounts } from "../lib/format";
@@ -112,7 +113,7 @@ export function App() {
         setRequests((current) => [
           ...current,
           createCapturedRequestFromHarEntry(request, content ?? undefined, encoding ?? undefined)
-        ].slice(-500));
+        ].slice(-CAPTURED_REQUEST_LIMIT));
       });
     });
 
@@ -232,7 +233,7 @@ export function App() {
         return;
       }
 
-      setRequests((current) => [...current, ...imported].slice(-500));
+      setRequests((current) => [...current, ...imported].slice(-CAPTURED_REQUEST_LIMIT));
       setLastExportStatus(`HAR imported: ${imported.length} request(s)`);
     } catch {
       setLastExportStatus("HAR import failed: invalid file");

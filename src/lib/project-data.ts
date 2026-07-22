@@ -1,3 +1,4 @@
+import { CAPTURED_REQUEST_LIMIT } from "./capture-status";
 import { normalizeEndpointPreferences, type EndpointPreferences } from "./endpoint-preferences";
 import { normalizeCaptureSessions, type CaptureSession } from "./sessions";
 import type { CapturedRequest } from "./types";
@@ -42,7 +43,7 @@ function normalizeCapturedRequests(value: unknown): CapturedRequest[] {
     return [];
   }
 
-  return value.filter(isCapturedRequestLike).slice(-500);
+  return value.filter(isCapturedRequestLike).slice(-CAPTURED_REQUEST_LIMIT);
 }
 
 export function buildProjectDataExport(snapshot: ProjectDataSnapshot, now = new Date()): ProjectDataExport {

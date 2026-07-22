@@ -1,3 +1,4 @@
+import { CAPTURED_REQUEST_LIMIT } from "./capture-status";
 import type { CapturedRequest } from "./types";
 
 export interface CaptureSession {
@@ -44,7 +45,7 @@ export function normalizeCaptureSessions(value: unknown): CaptureSession[] {
     })
     .map((session) => ({
       ...session,
-      requests: session.requests.slice(-500)
+      requests: session.requests.slice(-CAPTURED_REQUEST_LIMIT)
     }))
     .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
 }
