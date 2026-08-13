@@ -5,13 +5,13 @@
 ## Later
 
 - Add optional AI endpoint summaries.
-- Add SDK hint generation from OpenAPI paths.
-- Add sharing-safe redaction profiles.
 - Add framework detection for common API backends.
 - Add GitHub Pages demo documentation.
 
 ## Done
 
+- Added SDK hint generation (cURL, JavaScript fetch, Python requests) from captured endpoints.
+- Added sharing-safe (strict) redaction profiles alongside the existing standard profile.
 - Added integration tests around build output.
 - Tightened empty, loading, and capture-limit UI states.
 - Added capture status helpers and unified the 500-request cap.

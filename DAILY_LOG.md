@@ -1,5 +1,13 @@
 # Daily Log
 
+## 2026-08-13
+
+- Added sharing-safe redaction: `src/lib/redaction.ts` now takes an optional `RedactionProfile` (`"standard"` | `"strict"`, defaulting to `"standard"` so existing call sites and behavior are unchanged). `strict` redacts every header outside a small safe allowlist (content-type, accept, host, user-agent, etc.), redacts every query value regardless of name, and scrubs embedded emails/IPv4 addresses from remaining body text. Wired a "Redaction" dropdown into the DevTools panel's OpenAPI export block so OpenAPI/Markdown export output can be switched to the sharing-safe profile before copying or downloading.
+- Added `src/lib/sdk-hints.ts`: generates ready-to-paste cURL, JavaScript (`fetch`), and Python (`requests`) snippets for a captured endpoint, built from its method, path template, origin, first sample's query string, notable request headers (transport noise like `Host`/`Content-Length` dropped), and JSON body (translated to `True`/`False`/`None` for the Python snippet). Added a new "SDK Hints" tab in the endpoint detail view, alongside Samples/Schema/Export Preview.
+- `npm audit --audit-level=moderate` initially flagged 2 high-severity transitive dev-dependency advisories (`nanoid`, `postcss`) unrelated to today's changes (package.json/lock were untouched by this session); ran `npm audit fix`, which resolved both cleanly to 0 vulnerabilities without touching build/test output.
+- Updated `BACKLOG.md`: moved "Add SDK hint generation from OpenAPI paths" and "Add sharing-safe redaction profiles" from `Later` to `Done`.
+- Checks run: `npm run build`, `npm test` (58 passing), `npm audit --audit-level=moderate` (0 vulnerabilities after fix), `npm run smoke`.
+
 ## 2026-07-22
 
 - Added `src/lib/capture-status.ts` (`isAtCaptureLimit`, `resolveEmptyStateReason`) and replaced the hardcoded `500` request-cap literal across `storage.ts`, `sessions.ts`, `project-data.ts`, and `App.tsx` with one shared `CAPTURED_REQUEST_LIMIT` constant.
