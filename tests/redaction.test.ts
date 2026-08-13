@@ -64,4 +64,74 @@ describe("redaction", () => {
     expect(redacted.requestBody).toContain("[REDACTED]");
     expect(redacted.responseBody).toContain("[REDACTED]");
   });
+
+  it("standard profile leaves non-sensitive headers and query values alone", () => {
+    expect(redactHeaders([{ name: "x-request-id", value: "abc-123" }], "standard")).toEqual([
+      { name: "x-request-id", value: "abc-123" }
+    ]);
+    expect(redactQuery([{ name: "include", value: "teams" }], "standard")).toEqual([
+      { name: "include", value: "teams" }
+    ]);
+  });
+
+  it("strict profile redacts headers outside the safe allowlist", () => {
+    expect(
+      redactHeaders(
+        [
+          { name: "content-type", value: "application/json" },
+          { name: "x-request-id", value: "abc-123" }
+        ],
+        "strict"
+      )
+    ).toEqual([
+      { name: "content-type", value: "application/json" },
+      { name: "x-request-id", value: "[REDACTED]" }
+    ]);
+  });
+
+  it("strict profile redacts every query value regardless of name", () => {
+    expect(redactQuery([{ name: "include", value: "teams" }], "strict")).toEqual([
+      { name: "include", value: "[REDACTED]" }
+    ]);
+  });
+
+  it("strict profile scrubs emails and IPv4 addresses embedded in body text", () => {
+    const body = redactBodyText('{"contact":"ada@example.com","host":"10.0.0.5","age":37}', "strict");
+
+    expect(JSON.parse(body ?? "{}")).toEqual({
+      contact: "[REDACTED]",
+      host: "[REDACTED]",
+      age: 37
+    });
+  });
+
+  it("redacts a full captured request with the strict profile", () => {
+    const request: CapturedRequest = {
+      id: "two",
+      url: "https://api.example.com/users?include=teams",
+      origin: "https://api.example.com",
+      path: "/users",
+      pathTemplate: "/users",
+      method: "GET",
+      status: 200,
+      startedDateTime: "2026-08-13T00:00:00.000Z",
+      requestHeaders: [
+        { name: "content-type", value: "application/json" },
+        { name: "x-request-id", value: "abc-123" }
+      ],
+      responseHeaders: [{ name: "content-type", value: "application/json" }],
+      query: [{ name: "include", value: "teams" }],
+      requestBody: undefined,
+      responseBody: '{"owner":"ada@example.com"}'
+    };
+
+    const redacted = redactCapturedRequest(request, "strict");
+
+    expect(redacted.requestHeaders).toEqual([
+      { name: "content-type", value: "application/json" },
+      { name: "x-request-id", value: "[REDACTED]" }
+    ]);
+    expect(redacted.query[0].value).toBe("[REDACTED]");
+    expect(redacted.responseBody).toContain("[REDACTED]");
+  });
 });
