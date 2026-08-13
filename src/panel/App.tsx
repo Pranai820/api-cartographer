@@ -38,8 +38,9 @@ import { buildMarkdownReport } from "../lib/markdown-report";
 import { buildOpenApiDocument } from "../lib/openapi";
 import { buildProjectDataExport, parseProjectDataImport } from "../lib/project-data";
 import { createCapturedRequestFromHarEntry, parseHarLog } from "../lib/request-model";
-import { redactCapturedRequest, redactEndpointGroups } from "../lib/redaction";
+import { redactCapturedRequest, redactEndpointGroups, type RedactionProfile } from "../lib/redaction";
 import { groupRequests } from "../lib/request-model";
+import { buildSdkHints } from "../lib/sdk-hints";
 import { createCaptureSession, deleteCaptureSession, upsertCaptureSession, type CaptureSession } from "../lib/sessions";
 import {
   clearCapturedRequests,
@@ -70,6 +71,7 @@ export function App() {
   const [sessions, setSessions] = useState<CaptureSession[]>([]);
   const [openApiTitle, setOpenApiTitle] = useState("Captured API");
   const [openApiVersion, setOpenApiVersion] = useState("0.1.0");
+  const [redactionProfile, setRedactionProfile] = useState<RedactionProfile>("standard");
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [lastExportStatus, setLastExportStatus] = useState<string>("idle");
   const [isHydrating, setIsHydrating] = useState(true);
@@ -159,7 +161,10 @@ export function App() {
     }
   }, [selectedGroup, selectedGroupId]);
 
-  const redactedFilteredGroups = useMemo(() => redactEndpointGroups(filteredGroups), [filteredGroups]);
+  const redactedFilteredGroups = useMemo(
+    () => redactEndpointGroups(filteredGroups, redactionProfile),
+    [filteredGroups, redactionProfile]
+  );
   const openApiJson = useMemo(() => {
     return JSON.stringify(buildOpenApiDocument(redactedFilteredGroups, openApiTitle, openApiVersion), null, 2);
   }, [redactedFilteredGroups, openApiTitle, openApiVersion]);
@@ -503,6 +508,17 @@ export function App() {
                 onChange={(event) => setOpenApiVersion(event.target.value)}
                 placeholder="Version"
               />
+              <label htmlFor="redaction-profile" className="subtle">
+                Redaction
+              </label>
+              <select
+                id="redaction-profile"
+                value={redactionProfile}
+                onChange={(event) => setRedactionProfile(event.target.value as RedactionProfile)}
+              >
+                <option value="standard">Standard</option>
+                <option value="strict">Strict (sharing-safe)</option>
+              </select>
               <button className="button button-full" type="button" onClick={copyOpenApi}>
                 <CheckCircle2 size={16} />
                 Copy JSON
@@ -613,12 +629,13 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-type DetailTab = "samples" | "schema" | "export";
+type DetailTab = "samples" | "schema" | "export" | "sdk";
 
 const DETAIL_TABS: Array<{ id: DetailTab; label: string }> = [
   { id: "samples", label: "Samples" },
   { id: "schema", label: "Schema" },
-  { id: "export", label: "Export Preview" }
+  { id: "export", label: "Export Preview" },
+  { id: "sdk", label: "SDK Hints" }
 ];
 
 function EndpointDetail({
@@ -638,6 +655,7 @@ function EndpointDetail({
   );
   const requestSchema = useMemo(() => extractRequestSchema(operation), [operation]);
   const responseSchemas = useMemo(() => extractResponseSchemas(operation), [operation]);
+  const sdkHints = useMemo(() => buildSdkHints(group), [group]);
 
   return (
     <>
@@ -725,6 +743,17 @@ function EndpointDetail({
           <h3>OpenAPI Operation</h3>
           <pre>{operation ? JSON.stringify(operation, null, 2) : "No operation generated."}</pre>
         </div>
+      ) : null}
+
+      {activeTab === "sdk" ? (
+        <>
+          {sdkHints.map((hint) => (
+            <div className="sample-block" key={hint.id}>
+              <h3>{hint.label}</h3>
+              <pre>{hint.code}</pre>
+            </div>
+          ))}
+        </>
       ) : null}
     </>
   );
