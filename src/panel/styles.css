@@ -263,6 +263,12 @@ select:focus {
   text-align: left;
 }
 
+.endpoint-row-main:focus-visible {
+  outline: 2px solid #2d8b76;
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
 .endpoint-actions {
   display: flex;
   align-items: center;

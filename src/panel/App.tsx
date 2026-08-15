@@ -20,7 +20,7 @@ import {
   Trash2,
   Upload
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import {
   applyEndpointPreferences,
   EMPTY_ENDPOINT_PREFERENCES,
@@ -50,6 +50,7 @@ import {
   type SessionDiff
 } from "../lib/session-diff";
 import { createCaptureSession, deleteCaptureSession, upsertCaptureSession, type CaptureSession } from "../lib/sessions";
+import { resolveNextRowId } from "../lib/table-navigation";
 import {
   clearCapturedRequests,
   loadCapturedRequests,
@@ -88,6 +89,7 @@ export function App() {
   const harInputRef = useRef<HTMLInputElement>(null);
   const projectDataInputRef = useRef<HTMLInputElement>(null);
   const isCapturingRef = useRef(isCapturing);
+  const rowRefs = useRef(new Map<string, HTMLButtonElement>());
 
   useEffect(() => {
     isCapturingRef.current = isCapturing;
@@ -218,6 +220,30 @@ export function App() {
     anchor.click();
     URL.revokeObjectURL(url);
     setLastExportStatus("Markdown downloaded");
+  }
+
+  function registerRowRef(endpointId: string, element: HTMLButtonElement | null) {
+    if (element) {
+      rowRefs.current.set(endpointId, element);
+    } else {
+      rowRefs.current.delete(endpointId);
+    }
+  }
+
+  function moveSelection(event: KeyboardEvent<HTMLDivElement>) {
+    const nextId = resolveNextRowId(
+      event.key,
+      filteredGroups.map((group) => group.id),
+      selectedGroup?.id ?? null
+    );
+
+    if (!nextId) {
+      return;
+    }
+
+    event.preventDefault();
+    setSelectedGroupId(nextId);
+    rowRefs.current.get(nextId)?.focus();
   }
 
   function toggleEndpointPin(endpointId: string) {
@@ -595,19 +621,27 @@ export function App() {
             {sessionDiff ? (
               <SessionDiffView diff={sessionDiff} />
             ) : filteredGroups.length ? (
-              <div className="endpoint-table">
+              <div className="endpoint-table" role="group" aria-label="Captured endpoints" onKeyDown={moveSelection}>
                 {filteredGroups.map((group) => {
                   const pinned = isPinned(endpointPreferences, group.id);
                   const ignored = isIgnored(endpointPreferences, group.id);
-  
+                  const selected = group.id === selectedGroup?.id;
+
                   return (
                     <div
-                      className={`endpoint-row${group.id === selectedGroup?.id ? " endpoint-row-selected" : ""}${
+                      className={`endpoint-row${selected ? " endpoint-row-selected" : ""}${
                         pinned ? " endpoint-row-pinned" : ""
                       }${ignored ? " endpoint-row-ignored" : ""}`}
                       key={group.id}
                     >
-                      <button className="endpoint-row-main" type="button" onClick={() => setSelectedGroupId(group.id)}>
+                      <button
+                        className="endpoint-row-main"
+                        type="button"
+                        aria-current={selected}
+                        tabIndex={selected ? 0 : -1}
+                        ref={(element) => registerRowRef(group.id, element)}
+                        onClick={() => setSelectedGroupId(group.id)}
+                      >
                         <span className={`method method-${group.method.toLowerCase()}`}>{group.method}</span>
                         <span className="endpoint-path">{group.pathTemplate}</span>
                         <span className="endpoint-origin">{group.origin}</span>
