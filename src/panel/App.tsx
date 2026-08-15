@@ -41,6 +41,14 @@ import { createCapturedRequestFromHarEntry, parseHarLog } from "../lib/request-m
 import { redactCapturedRequest, redactEndpointGroups, type RedactionProfile } from "../lib/redaction";
 import { groupRequests } from "../lib/request-model";
 import { buildSdkHints } from "../lib/sdk-hints";
+import {
+  describeSessionDiff,
+  diffCapturedRequests,
+  formatCountDelta,
+  onlyChangedEntries,
+  type EndpointDiffEntry,
+  type SessionDiff
+} from "../lib/session-diff";
 import { createCaptureSession, deleteCaptureSession, upsertCaptureSession, type CaptureSession } from "../lib/sessions";
 import {
   clearCapturedRequests,
@@ -69,6 +77,7 @@ export function App() {
   const [endpointPreferences, setEndpointPreferences] = useState<EndpointPreferences>(EMPTY_ENDPOINT_PREFERENCES);
   const [sessionName, setSessionName] = useState("Untitled capture");
   const [sessions, setSessions] = useState<CaptureSession[]>([]);
+  const [diffBaselineId, setDiffBaselineId] = useState<string | null>(null);
   const [openApiTitle, setOpenApiTitle] = useState("Captured API");
   const [openApiVersion, setOpenApiVersion] = useState("0.1.0");
   const [redactionProfile, setRedactionProfile] = useState<RedactionProfile>("standard");
@@ -150,6 +159,15 @@ export function App() {
   const hiddenIgnoredCount = matchedGroups.length - filteredGroups.length;
   const emptyStateReason = resolveEmptyStateReason(requests.length, filteredGroups.length);
   const atCaptureLimit = isAtCaptureLimit(requests.length);
+
+  const diffBaseline = useMemo(
+    () => sessions.find((session) => session.id === diffBaselineId) ?? null,
+    [diffBaselineId, sessions]
+  );
+  const sessionDiff = useMemo(
+    () => (diffBaseline ? diffCapturedRequests(diffBaseline.requests, requests) : null),
+    [diffBaseline, requests]
+  );
 
   const selectedGroup = useMemo(() => {
     return filteredGroups.find((group) => group.id === selectedGroupId) ?? filteredGroups[0];
@@ -437,6 +455,25 @@ export function App() {
                 Save Session
               </button>
               {sessions.length ? (
+                <>
+                  <label htmlFor="diff-baseline" className="subtle">
+                    Compare current capture with
+                  </label>
+                  <select
+                    id="diff-baseline"
+                    value={diffBaselineId ?? "none"}
+                    onChange={(event) => setDiffBaselineId(event.target.value === "none" ? null : event.target.value)}
+                  >
+                    <option value="none">No comparison</option>
+                    {sessions.map((session) => (
+                      <option key={session.id} value={session.id}>
+                        {session.name}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              ) : null}
+              {sessions.length ? (
                 <div className="session-list">
                   {sessions.slice(0, 4).map((session) => (
                     <div className="session-row" key={session.id}>
@@ -539,16 +576,25 @@ export function App() {
             </div>
           </aside>
   
-          <section className="endpoint-list" aria-label="Endpoint groups">
+          <section className="endpoint-list" aria-label={sessionDiff ? "Session diff" : "Endpoint groups"}>
             <div className="section-heading">
               <div>
-                <p className="eyebrow">Observed</p>
-                <h2>Endpoints</h2>
+                <p className="eyebrow">{diffBaseline ? `vs ${diffBaseline.name}` : "Observed"}</p>
+                <h2>{sessionDiff ? "Changes" : "Endpoints"}</h2>
               </div>
-              <Filter size={18} />
+              {sessionDiff ? (
+                <button className="button" type="button" onClick={() => setDiffBaselineId(null)} title="Exit diff view">
+                  <RotateCcw size={16} />
+                  Exit Diff
+                </button>
+              ) : (
+                <Filter size={18} />
+              )}
             </div>
-  
-            {filteredGroups.length ? (
+
+            {sessionDiff ? (
+              <SessionDiffView diff={sessionDiff} />
+            ) : filteredGroups.length ? (
               <div className="endpoint-table">
                 {filteredGroups.map((group) => {
                   const pinned = isPinned(endpointPreferences, group.id);
@@ -617,6 +663,50 @@ export function App() {
         )}
       </section>
     </main>
+  );
+}
+
+const DIFF_STATUS_LABELS: Record<EndpointDiffEntry["status"], string> = {
+  added: "New",
+  removed: "Gone",
+  changed: "Changed",
+  unchanged: "Same"
+};
+
+function SessionDiffView({ diff }: { diff: SessionDiff }) {
+  const entries = onlyChangedEntries(diff);
+
+  return (
+    <>
+      <p className="subtle diff-summary">{describeSessionDiff(diff.summary)}</p>
+
+      {entries.length ? (
+        <div className="endpoint-table">
+          {entries.map((entry) => (
+            <div className={`endpoint-row diff-row diff-row-${entry.status}`} key={entry.id}>
+              <div className="endpoint-row-main diff-row-main">
+                <span className={`diff-status diff-status-${entry.status}`}>{DIFF_STATUS_LABELS[entry.status]}</span>
+                <span className={`method method-${entry.method.toLowerCase()}`}>{entry.method}</span>
+                <span className="endpoint-path">{entry.pathTemplate}</span>
+                <span className="endpoint-origin">{entry.origin}</span>
+                <span className="endpoint-count">{formatCountDelta(entry.countDelta)}</span>
+              </div>
+              {entry.addedStatusCodes.length || entry.removedStatusCodes.length ? (
+                <p className="subtle diff-status-codes">
+                  {entry.addedStatusCodes.length ? `New statuses: ${entry.addedStatusCodes.join(", ")}. ` : ""}
+                  {entry.removedStatusCodes.length ? `Gone: ${entry.removedStatusCodes.join(", ")}.` : ""}
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="empty-state">
+          <CheckCircle2 size={18} />
+          <span>No endpoint differences against this session.</span>
+        </div>
+      )}
+    </>
   );
 }
 

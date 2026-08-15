@@ -295,6 +295,64 @@ select:focus {
   opacity: 0.58;
 }
 
+.diff-summary {
+  margin: 0 0 4px;
+}
+
+.diff-row {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  padding-bottom: 2px;
+}
+
+.diff-row-main {
+  cursor: default;
+  grid-template-columns: 64px 70px minmax(120px, 1fr) minmax(120px, 190px) 42px;
+}
+
+.diff-row-added {
+  box-shadow: inset 3px 0 0 #2d8b76;
+}
+
+.diff-row-removed {
+  box-shadow: inset 3px 0 0 #b4483c;
+}
+
+.diff-row-changed {
+  box-shadow: inset 3px 0 0 #b8862f;
+}
+
+.diff-status {
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.diff-status-added {
+  background: #e4f5ee;
+  color: #1f6b58;
+}
+
+.diff-status-removed {
+  background: #fbe8e5;
+  color: #8f382e;
+}
+
+.diff-status-changed {
+  background: #fbf1dc;
+  color: #7d5c17;
+}
+
+.diff-status-codes {
+  margin: 0;
+  padding: 0 10px 8px;
+}
+
 .method {
   width: 62px;
   height: 24px;
