@@ -17,6 +17,7 @@ import {
   RotateCcw,
   Save,
   Search,
+  StickyNote,
   Trash2,
   Upload
 } from "lucide-react";
@@ -24,8 +25,11 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEv
 import {
   applyEndpointPreferences,
   EMPTY_ENDPOINT_PREFERENCES,
+  ENDPOINT_NOTE_LIMIT,
+  getEndpointNote,
   isIgnored,
   isPinned,
+  setEndpointNote,
   toggleIgnored,
   togglePinned,
   type EndpointPreferences
@@ -252,6 +256,10 @@ export function App() {
 
   function toggleEndpointIgnore(endpointId: string) {
     setEndpointPreferences((current) => toggleIgnored(current, endpointId));
+  }
+
+  function updateEndpointNote(endpointId: string, note: string) {
+    setEndpointPreferences((current) => setEndpointNote(current, endpointId, note));
   }
 
   function saveCurrentSession() {
@@ -688,7 +696,13 @@ export function App() {
   
           <section className="detail-panel" aria-label="Endpoint details">
             {selectedGroup ? (
-              <EndpointDetail group={selectedGroup} openApiTitle={openApiTitle} openApiVersion={openApiVersion} />
+              <EndpointDetail
+                group={selectedGroup}
+                openApiTitle={openApiTitle}
+                openApiVersion={openApiVersion}
+                note={getEndpointNote(endpointPreferences, selectedGroup.id)}
+                onNoteChange={(note) => updateEndpointNote(selectedGroup.id, note)}
+              />
             ) : (
               <div className="empty-state">No endpoint selected.</div>
             )}
@@ -765,14 +779,30 @@ const DETAIL_TABS: Array<{ id: DetailTab; label: string }> = [
 function EndpointDetail({
   group,
   openApiTitle,
-  openApiVersion
+  openApiVersion,
+  note,
+  onNoteChange
 }: {
   group: EndpointGroup;
   openApiTitle: string;
   openApiVersion: string;
+  note: string;
+  onNoteChange: (note: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState<DetailTab>("samples");
+  const [draftNote, setDraftNote] = useState(note);
   const sample = group.samples[0] ? redactCapturedRequest(group.samples[0]) : undefined;
+
+  // Notes are trimmed when stored, so the textarea keeps its own draft and
+  // only re-seeds from storage when a different endpoint is selected.
+  useEffect(() => {
+    setDraftNote(note);
+  }, [group.id]);
+
+  function handleNoteChange(value: string) {
+    setDraftNote(value);
+    onNoteChange(value);
+  }
   const operation = useMemo(
     () => buildEndpointOperation(group, openApiTitle, openApiVersion),
     [group, openApiTitle, openApiVersion]
@@ -809,6 +839,22 @@ function EndpointDetail({
           <dd>{group.samples.length}</dd>
         </div>
       </dl>
+
+      <div className="note-block">
+        <label htmlFor="endpoint-note">
+          <StickyNote size={15} />
+          Notes
+        </label>
+        <textarea
+          id="endpoint-note"
+          className="note-input"
+          value={draftNote}
+          maxLength={ENDPOINT_NOTE_LIMIT}
+          rows={3}
+          placeholder="Auth requirements, gotchas, owning team…"
+          onChange={(event) => handleNoteChange(event.target.value)}
+        />
+      </div>
 
       <div className="detail-tabs" role="tablist" aria-label="Endpoint detail views">
         {DETAIL_TABS.map((tab) => (

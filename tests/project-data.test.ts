@@ -30,7 +30,8 @@ const session = {
 
 const preferences = {
   pinnedEndpointIds: ["GET https://api.example.com/users"],
-  ignoredEndpointIds: []
+  ignoredEndpointIds: [],
+  notes: { "GET https://api.example.com/users": "Requires an admin token" }
 };
 
 describe("project data export/import", () => {
@@ -79,7 +80,7 @@ describe("project data export/import", () => {
 
     expect(snapshot.requests).toEqual([request]);
     expect(snapshot.sessions).toEqual([session]);
-    expect(snapshot.endpointPreferences).toEqual({ pinnedEndpointIds: [], ignoredEndpointIds: [] });
+    expect(snapshot.endpointPreferences).toEqual({ pinnedEndpointIds: [], ignoredEndpointIds: [], notes: {} });
   });
 
   it("caps imported requests at the last 500", () => {

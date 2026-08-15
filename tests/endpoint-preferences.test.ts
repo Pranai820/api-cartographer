@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   applyEndpointPreferences,
   EMPTY_ENDPOINT_PREFERENCES,
+  ENDPOINT_NOTE_LIMIT,
+  getEndpointNote,
   isIgnored,
   isPinned,
   normalizeEndpointPreferences,
+  setEndpointNote,
   toggleIgnored,
   togglePinned
 } from "../src/lib/endpoint-preferences";
@@ -55,5 +58,33 @@ describe("endpoint preferences", () => {
       "health",
       "users"
     ]);
+  });
+
+  it("stores, trims, and clears endpoint notes", () => {
+    const noted = setEndpointNote(EMPTY_ENDPOINT_PREFERENCES, "users", "  Requires an admin token  ");
+
+    expect(getEndpointNote(noted, "users")).toBe("Requires an admin token");
+    expect(getEndpointNote(noted, "orders")).toBe("");
+    expect(getEndpointNote(setEndpointNote(noted, "users", "   "), "users")).toBe("");
+    expect(getEndpointNote(setEndpointNote(noted, "users", "x".repeat(ENDPOINT_NOTE_LIMIT + 50)), "users")).toHaveLength(
+      ENDPOINT_NOTE_LIMIT
+    );
+  });
+
+  it("keeps notes when pin and ignore state changes", () => {
+    const noted = setEndpointNote(EMPTY_ENDPOINT_PREFERENCES, "users", "Paginated");
+
+    expect(getEndpointNote(togglePinned(noted, "users"), "users")).toBe("Paginated");
+    expect(getEndpointNote(toggleIgnored(noted, "orders"), "users")).toBe("Paginated");
+  });
+
+  it("drops malformed notes while normalizing", () => {
+    const preferences = normalizeEndpointPreferences({
+      notes: { users: "keep", orders: 42, health: "" }
+    } as never);
+
+    expect(preferences.notes).toEqual({ users: "keep" });
+    expect(normalizeEndpointPreferences(undefined).notes).toEqual({});
+    expect(normalizeEndpointPreferences({ notes: ["nope"] } as never).notes).toEqual({});
   });
 });

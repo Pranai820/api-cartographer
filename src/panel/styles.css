@@ -544,6 +544,38 @@ dd {
   margin-top: 16px;
 }
 
+.note-block {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 16px;
+}
+
+.note-block label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #465149;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.note-input {
+  width: 100%;
+  font: inherit;
+  border: 1px solid #c8d0c5;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #20201d;
+  padding: 8px 10px;
+  outline: none;
+  resize: vertical;
+}
+
+.note-input:focus {
+  border-color: #2d8b76;
+  box-shadow: 0 0 0 3px rgba(45, 139, 118, 0.14);
+}
+
 .header-list {
   display: grid;
   border: 1px solid #dfe4dc;
