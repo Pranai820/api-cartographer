@@ -1,5 +1,15 @@
 # Daily Log
 
+## 2026-08-15
+
+- Backlog `Ready` was empty, so pulled the three `ROADMAP.md` Week 3 lines that had never shipped: session diff, keyboard table navigation, and endpoint notes. Week 3 is now complete, which means Weeks 1-4 are all done.
+- Added `src/lib/session-diff.ts`: compares two grouped captures endpoint-by-endpoint and classifies each as added/removed/changed/unchanged, with request-count and status-code deltas for endpoints present in both. Wired it into the panel as a "Compare current capture with" session picker; choosing a baseline swaps the endpoint list for a diff view (unchanged endpoints are summarized rather than listed).
+- Added `src/lib/table-navigation.ts`: resolves the next row for Arrow/Page/Home/End keys, clamping at both ends rather than wrapping, and starting from the top when nothing is selected. Wired into the endpoint list with a roving tab index (only the selected row is tabbable), so the list is entered once with Tab and traversed with the keyboard; added a `:focus-visible` outline for the rows.
+- Added per-endpoint notes to `EndpointPreferences` (trimmed, capped at 2000 chars, empty notes dropped). Because storage and project-data both route through `normalizeEndpointPreferences`, notes persist and round-trip through export/import for free. Fixed a bug this exposed: `togglePinned`/`toggleIgnored` rebuilt the preferences object from scratch, so any new field — notes included — would have been wiped on every pin/ignore toggle; they now spread existing state forward.
+- Skipped `role="listbox"`/`role="option"` for the endpoint list: rows also contain pin/ignore buttons, which are not valid inside a listbox. Used a labeled `role="group"` with `aria-current` on the selected row instead.
+- Updated `BACKLOG.md`: added the three shipped items to `Done`.
+- Checks run: `npm run build`, `npm test` (74 passing), `npm audit --audit-level=moderate`, `npm run smoke`.
+
 ## 2026-08-13
 
 - Added sharing-safe redaction: `src/lib/redaction.ts` now takes an optional `RedactionProfile` (`"standard"` | `"strict"`, defaulting to `"standard"` so existing call sites and behavior are unchanged). `strict` redacts every header outside a small safe allowlist (content-type, accept, host, user-agent, etc.), redacts every query value regardless of name, and scrubs embedded emails/IPv4 addresses from remaining body text. Wired a "Redaction" dropdown into the DevTools panel's OpenAPI export block so OpenAPI/Markdown export output can be switched to the sharing-safe profile before copying or downloading.

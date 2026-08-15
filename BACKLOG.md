@@ -10,6 +10,9 @@
 
 ## Done
 
+- Added a session diff view comparing the current capture with a saved session.
+- Added keyboard-accessible endpoint table navigation.
+- Added per-endpoint notes that persist and round-trip through project data.
 - Added SDK hint generation (cURL, JavaScript fetch, Python requests) from captured endpoints.
 - Added sharing-safe (strict) redaction profiles alongside the existing standard profile.
 - Added integration tests around build output.
