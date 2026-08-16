@@ -9,6 +9,7 @@ import {
   FileText,
   Filter,
   Globe2,
+  Layers,
   PauseCircle,
   Pin,
   PinOff,
@@ -37,6 +38,7 @@ import {
 import { CAPTURED_REQUEST_LIMIT, isAtCaptureLimit, resolveEmptyStateReason } from "../lib/capture-status";
 import { buildEndpointOperation, extractRequestSchema, extractResponseSchemas } from "../lib/endpoint-detail";
 import { filterEndpointGroups, listContentTypes, listMethods, listStatusCodes } from "../lib/filters";
+import { detectFrameworks } from "../lib/framework-detection";
 import { formatDuration, formatStatusCounts } from "../lib/format";
 import { buildMarkdownReport } from "../lib/markdown-report";
 import { buildOpenApiDocument } from "../lib/openapi";
@@ -166,6 +168,7 @@ export function App() {
   const emptyStateReason = resolveEmptyStateReason(requests.length, filteredGroups.length);
   const atCaptureLimit = isAtCaptureLimit(requests.length);
 
+  const detectedFrameworks = useMemo(() => detectFrameworks(requests), [requests]);
   const diffBaseline = useMemo(
     () => sessions.find((session) => session.id === diffBaselineId) ?? null,
     [diffBaselineId, sessions]
@@ -473,6 +476,27 @@ export function App() {
               {showIgnored ? "Hide Ignored" : "Show Ignored"}
             </button>
   
+            {detectedFrameworks.length ? (
+              <div className="stack-block">
+                <p className="block-title">
+                  <Layers size={15} />
+                  Detected Stack
+                </p>
+                <div className="stack-chips">
+                  {detectedFrameworks.map((detection) => (
+                    <span
+                      className={`stack-chip stack-chip-${detection.confidence}`}
+                      key={detection.id}
+                      title={`${detection.confidence} confidence, ${detection.requestCount} request(s)\n${detection.evidence.join("\n")}`}
+                    >
+                      {detection.label}
+                    </span>
+                  ))}
+                </div>
+                <p className="subtle">Inferred locally from response headers, cookie names, and paths. Not included in exports.</p>
+              </div>
+            ) : null}
+
             <div className="session-block">
               <p className="block-title">
                 <FolderOpen size={15} />

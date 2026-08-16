@@ -187,10 +187,34 @@ h3 {
 }
 
 .control-block,
-.export-block {
+.export-block,
+.stack-block {
   display: grid;
   gap: 8px;
   margin-bottom: 18px;
+}
+
+.stack-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.stack-chip {
+  border: 1px solid #cfe0d8;
+  border-radius: 999px;
+  background: #eef7f3;
+  color: #1f6b58;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: help;
+}
+
+.stack-chip-medium {
+  border-color: #ddded2;
+  background: #f5f6f0;
+  color: #5f6a58;
 }
 
 .control-block label,
