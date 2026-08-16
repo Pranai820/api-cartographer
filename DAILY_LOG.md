@@ -1,5 +1,17 @@
 # Daily Log
 
+## 2026-08-16
+
+- Roadmap Weeks 1-4 are all complete and backlog `Ready` was empty, so pulled two of the three `Later` items.
+- Added `src/lib/framework-detection.ts`: a rule table matching response headers, cookie names, and path shapes to backend frameworks (Express, Next.js, ASP.NET, PHP/Laravel, Django, Flask, FastAPI, Gunicorn, Rails, Java/Spring, WordPress), API styles (GraphQL, JSON:API, OData), and platforms (Vercel, Cloudflare, AWS API Gateway, Netlify, Supabase, Hasura, Shopify). Each detection carries deduped, truncated evidence, so a chip can be traced to the header that produced it.
+- Two bugs caught by the tests while writing them: evidence reported the lowercase lookup name instead of the header name as sent (now reads the matched header entry), and the Rails cookie pattern `/_session$/` also matched `laravel_session` (now requires Rails' leading-underscore convention, with a regression test).
+- Cookie rules deliberately use cookie *names* only, never values — detections are rendered in the panel, and cookie values are session material. Added a test asserting no cookie value reaches the output.
+- Wired a "Detected Stack" sidebar block: chips shaded by confidence, evidence in the tooltip. Detection runs on unredacted captures so header/cookie signals survive, so results are display-only and deliberately not folded into OpenAPI or Markdown exports (under the strict redaction profile most of the evidence headers are masked anyway).
+- Added `docs/`, a self-contained GitHub Pages site (plain HTML + inline CSS, no build step) with features, install-from-source steps, and a privacy summary. The panel visual is a CSS reconstruction, captioned as an illustration rather than a screenshot. README documents pointing Pages at `/docs`; Pages still has to be enabled in repo settings by hand.
+- Verified the docs page in headless Chromium: no console errors, no failed requests, no horizontal overflow at 380px or desktop width.
+- Left "Add optional AI endpoint summaries" in `Later` with a note: it is the only item that would make the extension talk to a remote service, which contradicts the local-first constraint in `ARCHITECTURE.md` and the no-network-requests promise in `PRIVACY.md`. That needs a product decision (and a privacy doc update) before it gets built.
+- Checks run: `npm run build`, `npm test` (85 passing), `npm audit --audit-level=moderate`, `npm run smoke`.
+
 ## 2026-08-15
 
 - Backlog `Ready` was empty, so pulled the three `ROADMAP.md` Week 3 lines that had never shipped: session diff, keyboard table navigation, and endpoint notes. Week 3 is now complete, which means Weeks 1-4 are all done.

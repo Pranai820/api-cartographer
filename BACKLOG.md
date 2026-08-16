@@ -4,12 +4,15 @@
 
 ## Later
 
-- Add optional AI endpoint summaries.
-- Add framework detection for common API backends.
-- Add GitHub Pages demo documentation.
+- Add optional AI endpoint summaries. Needs a decision first: this is the only
+  backlog item that would make the extension talk to a remote service, which
+  cuts against the local-first constraint in `ARCHITECTURE.md` and the "no
+  network requests" promise in `PRIVACY.md`.
 
 ## Done
 
+- Added a GitHub Pages demo site under `docs/`.
+- Added framework, API style, and hosting platform detection from captured traffic.
 - Added a session diff view comparing the current capture with a saved session.
 - Added keyboard-accessible endpoint table navigation.
 - Added per-endpoint notes that persist and round-trip through project data.
