@@ -38,6 +38,17 @@ npx playwright install chromium
 npm run smoke
 ```
 
+## Demo Page
+
+`docs/` holds a self-contained GitHub Pages site describing the extension,
+its features, and how to install it from source. It is plain HTML with
+inline CSS and no build step — open `docs/index.html` locally to preview
+it.
+
+To publish it: GitHub repo Settings, then Pages, then set Source to
+"Deploy from a branch" with branch `main` and folder `/docs`. The site
+then serves from `https://pranai820.github.io/api-cartographer/`.
+
 ## Privacy
 
 API Cartographer is local-first and makes no network requests of its

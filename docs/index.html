@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>API Cartographer — map live network traffic into API docs</title>
+    <meta
+      name="description"
+      content="A Chrome DevTools extension that turns live network traffic into an API map, OpenAPI 3.1 drafts, and Markdown reports — entirely on your machine."
+    />
+    <link rel="icon" href="icon-128.png" />
+    <style>
+      :root {
+        --ink: #20201d;
+        --muted: #626b61;
+        --line: #dfe4dc;
+        --paper: #ffffff;
+        --wash: #f6f8f4;
+        --accent: #2d8b76;
+        --accent-wash: #eef7f3;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--wash);
+        color: var(--ink);
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+        line-height: 1.6;
+      }
+
+      main {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 48px 20px 72px;
+      }
+
+      header.hero {
+        display: grid;
+        gap: 14px;
+        padding-bottom: 32px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .eyebrow {
+        margin: 0;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 38px;
+        line-height: 1.15;
+      }
+
+      .lede {
+        margin: 0;
+        max-width: 60ch;
+        font-size: 17px;
+        color: var(--muted);
+      }
+
+      .cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 6px;
+      }
+
+      .cta {
+        display: inline-block;
+        border: 1px solid var(--accent);
+        border-radius: 6px;
+        background: var(--accent);
+        color: #ffffff;
+        padding: 9px 16px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .cta-secondary {
+        background: var(--paper);
+        color: var(--accent);
+      }
+
+      h2 {
+        margin: 44px 0 12px;
+        font-size: 22px;
+      }
+
+      h3 {
+        margin: 0 0 6px;
+        font-size: 15px;
+      }
+
+      p,
+      li {
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        padding: 16px;
+      }
+
+      .card p {
+        margin: 0;
+        font-size: 14px;
+      }
+
+      ol,
+      ul {
+        padding-left: 20px;
+      }
+
+      code,
+      pre {
+        font-family: ui-monospace, "Cascadia Mono", "Consolas", monospace;
+        font-size: 13px;
+      }
+
+      pre {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        color: var(--ink);
+        padding: 14px 16px;
+      }
+
+      figure {
+        margin: 0;
+      }
+
+      figcaption {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        font-style: italic;
+      }
+
+      /* A CSS reconstruction of the panel layout — an illustration, not a screenshot. */
+      .mock {
+        display: grid;
+        grid-template-columns: 150px 1fr;
+        gap: 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        padding: 12px;
+        font-size: 11px;
+      }
+
+      .mock-side {
+        display: grid;
+        gap: 6px;
+        align-content: start;
+      }
+
+      .mock-field,
+      .mock-row {
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: var(--wash);
+        padding: 6px 8px;
+        color: var(--muted);
+      }
+
+      .mock-list {
+        display: grid;
+        gap: 6px;
+        align-content: start;
+      }
+
+      .mock-row {
+        display: grid;
+        grid-template-columns: 52px 1fr auto;
+        gap: 8px;
+        align-items: center;
+        background: var(--paper);
+      }
+
+      .mock-row-selected {
+        border-color: var(--accent);
+        background: var(--accent-wash);
+      }
+
+      .verb {
+        border-radius: 4px;
+        background: #e6efe9;
+        color: #2f5c4c;
+        padding: 1px 0;
+        font-weight: 800;
+        text-align: center;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+
+      .chip {
+        border: 1px solid #cfe0d8;
+        border-radius: 999px;
+        background: var(--accent-wash);
+        color: #1f6b58;
+        padding: 2px 8px;
+        font-weight: 800;
+      }
+
+      footer {
+        margin-top: 52px;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      a {
+        color: var(--accent);
+      }
+
+      @media (max-width: 620px) {
+        h1 {
+          font-size: 30px;
+        }
+
+        .mock {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <p class="eyebrow">Chrome DevTools Extension</p>
+        <h1>API Cartographer</h1>
+        <p class="lede">
+          Use an app while DevTools is open, and API Cartographer maps the traffic behind it: endpoints grouped by
+          normalized path, inferred request and response schemas, status patterns, and an OpenAPI 3.1 draft you can
+          export. Everything runs locally — the extension makes no network requests of its own.
+        </p>
+        <div class="cta-row">
+          <a class="cta" href="https://github.com/Pranai820/api-cartographer">View on GitHub</a>
+          <a class="cta cta-secondary" href="#install">Install from source</a>
+        </div>
+      </header>
+
+      <h2>What it does</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Groups traffic into endpoints</h3>
+          <p>
+            Numeric ids, UUIDs, and hashes in paths collapse into templates like <code>/users/{id}</code>, so a hundred
+            requests read as a handful of endpoints.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Infers schemas across samples</h3>
+          <p>
+            Request and response bodies are merged across multiple samples, handling nested arrays, nullable fields, and
+            mixed types.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Exports OpenAPI and Markdown</h3>
+          <p>
+            Copy or download an OpenAPI 3.1 document, or a Markdown API report with an endpoint table and per-endpoint
+            details.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Redacts before sharing</h3>
+          <p>
+            A standard profile masks auth headers and token-like values; a strict profile allowlists headers, masks every
+            query value, and scrubs emails and IPs from bodies.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Sessions and diffs</h3>
+          <p>
+            Save named captures, restore them later, and compare the current capture against one to see which endpoints
+            are new, gone, or returning different statuses.
+          </p>
+        </div>
+        <div class="card">
+          <h3>SDK hints and notes</h3>
+          <p>
+            Generate ready-to-paste cURL, JavaScript <code>fetch</code>, and Python <code>requests</code> snippets, and
+            keep your own notes per endpoint.
+          </p>
+        </div>
+      </div>
+
+      <h2>The panel</h2>
+      <figure>
+        <div class="mock">
+          <div class="mock-side">
+            <div class="mock-field">Search</div>
+            <div class="mock-field">Origin · Method · Status</div>
+            <div class="chips">
+              <span class="chip">Express</span>
+              <span class="chip">GraphQL</span>
+              <span class="chip">Vercel</span>
+            </div>
+            <div class="mock-field">Sessions</div>
+            <div class="mock-field">OpenAPI export</div>
+          </div>
+          <div class="mock-list">
+            <div class="mock-row mock-row-selected"><span class="verb">GET</span><span>/users/{id}</span><span>42</span></div>
+            <div class="mock-row"><span class="verb">POST</span><span>/users</span><span>7</span></div>
+            <div class="mock-row"><span class="verb">GET</span><span>/orders/{uuid}</span><span>18</span></div>
+            <div class="mock-row"><span class="verb">DELETE</span><span>/sessions/{id}</span><span>2</span></div>
+          </div>
+        </div>
+        <figcaption>An illustration of the panel layout, not a screenshot.</figcaption>
+      </figure>
+
+      <h2 id="install">Install from source</h2>
+      <p>There is no Chrome Web Store listing yet. Build it locally and load the unpacked extension:</p>
+      <pre><code>git clone https://github.com/Pranai820/api-cartographer.git
+cd api-cartographer
+npm install
+npm run build</code></pre>
+      <ol>
+        <li>Open <code>chrome://extensions</code>.</li>
+        <li>Enable Developer mode.</li>
+        <li>Choose Load unpacked.</li>
+        <li>Select the repo's <code>dist</code> folder.</li>
+        <li>Open DevTools on any page and pick the API Cartographer panel.</li>
+      </ol>
+      <p>
+        Capture only runs while that DevTools panel is open. Use the app you want to map, then filter, inspect, and
+        export.
+      </p>
+
+      <h2>Privacy</h2>
+      <p>
+        Captured traffic stays in <code>chrome.storage.local</code> on your machine, capped at the most recent 500
+        requests. The extension has no analytics and no remote endpoints. Redaction runs before anything is rendered or
+        exported; project-data backups intentionally keep unredacted data for local restore. See
+        <a href="https://github.com/Pranai820/api-cartographer/blob/main/PRIVACY.md">PRIVACY.md</a> for specifics.
+      </p>
+
+      <footer>
+        API Cartographer is a personal project, built in daily increments. Source, roadmap, and daily log live in the
+        <a href="https://github.com/Pranai820/api-cartographer">GitHub repository</a>.
+      </footer>
+    </main>
+  </body>
+</html>
