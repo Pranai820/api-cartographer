@@ -14,6 +14,12 @@ export interface PostmanQueryParam {
   value: string;
 }
 
+/** Postman keys headers by `key`, not by `name` as `HeaderEntry` does. */
+export interface PostmanHeader {
+  key: string;
+  value: string;
+}
+
 export interface PostmanUrl {
   raw: string;
   host: string[];
@@ -30,7 +36,7 @@ export interface PostmanBody {
 
 export interface PostmanRequest {
   method: string;
-  header: HeaderEntry[];
+  header: PostmanHeader[];
   url: PostmanUrl;
   description?: string;
   body?: PostmanBody;
@@ -41,7 +47,7 @@ export interface PostmanResponseExample {
   originalRequest: PostmanRequest;
   status: string;
   code: number;
-  header: HeaderEntry[];
+  header: PostmanHeader[];
   body: string;
   _postman_previewlanguage: "json" | "text";
 }
@@ -123,12 +129,18 @@ function buildBaseUrlVariables(origins: string[]): Map<string, PostmanVariable> 
   return variables;
 }
 
-function notableHeaders(sample: CapturedRequest | undefined): HeaderEntry[] {
+function toPostmanHeaders(headers: HeaderEntry[]): PostmanHeader[] {
+  return headers.map((header) => ({ key: header.name, value: header.value }));
+}
+
+function notableHeaders(sample: CapturedRequest | undefined): PostmanHeader[] {
   if (!sample) {
     return [];
   }
 
-  return sample.requestHeaders.filter((header) => !SKIPPED_HEADER_NAMES.has(header.name.trim().toLowerCase()));
+  return toPostmanHeaders(
+    sample.requestHeaders.filter((header) => !SKIPPED_HEADER_NAMES.has(header.name.trim().toLowerCase()))
+  );
 }
 
 function isJsonText(text: string): boolean {
@@ -257,7 +269,7 @@ function buildResponseExamples(group: EndpointGroup, request: PostmanRequest): P
       originalRequest: request,
       status: sample.statusText ?? "",
       code: sample.status,
-      header: sample.responseHeaders,
+      header: toPostmanHeaders(sample.responseHeaders),
       body: sample.responseBody,
       _postman_previewlanguage: json ? "json" : "text"
     }

@@ -164,6 +164,23 @@ describe("postman collection export", () => {
     expect(item.request.body).toBeUndefined();
   });
 
+  it("emits headers keyed by `key`, which is what Postman reads", () => {
+    const group = baseGroup({
+      samples: [
+        sampleRequest({
+          requestHeaders: [{ name: "x-request-id", value: "abc-123" }],
+          responseHeaders: [{ name: "content-type", value: "application/json" }],
+          responseBody: "{}"
+        })
+      ]
+    });
+
+    const [item] = requestItems(buildPostmanCollection([group]).item);
+
+    expect(item.request.header).toEqual([{ key: "x-request-id", value: "abc-123" }]);
+    expect(item.response[0].header).toEqual([{ key: "content-type", value: "application/json" }]);
+  });
+
   it("drops transport headers Postman sets itself", () => {
     const group = baseGroup({
       samples: [
@@ -179,7 +196,7 @@ describe("postman collection export", () => {
 
     const [item] = requestItems(buildPostmanCollection([group]).item);
 
-    expect(item.request.header).toEqual([{ name: "accept", value: "application/json" }]);
+    expect(item.request.header).toEqual([{ key: "accept", value: "application/json" }]);
   });
 
   it("saves the first sample with a response body as a Postman example", () => {
@@ -204,7 +221,7 @@ describe("postman collection export", () => {
       code: 200,
       status: "OK",
       body: '{"id":42}',
-      header: [{ name: "content-type", value: "application/json" }],
+      header: [{ key: "content-type", value: "application/json" }],
       _postman_previewlanguage: "json"
     });
     expect(item.response[0].originalRequest).toEqual(item.request);
