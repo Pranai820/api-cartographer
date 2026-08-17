@@ -25,7 +25,7 @@ most 20 saved sessions.
 ## Redaction defaults
 
 Before request/response samples are shown in the panel, or exported as
-OpenAPI/Markdown, `src/lib/redaction.ts` redacts:
+OpenAPI/Markdown/Postman, `src/lib/redaction.ts` redacts:
 
 - Header values whose name matches a sensitive pattern (`authorization`,
   `cookie`, `proxy-authorization`, `set-cookie`, `x-api-key`, `api-key`,

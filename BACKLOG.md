@@ -11,6 +11,7 @@
 
 ## Done
 
+- Added Postman Collection v2.1 export from captured endpoint groups.
 - Added a GitHub Pages demo site under `docs/`.
 - Added framework, API style, and hosting platform detection from captured traffic.
 - Added a session diff view comparing the current capture with a saved session.

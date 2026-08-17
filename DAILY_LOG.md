@@ -1,5 +1,15 @@
 # Daily Log
 
+## 2026-08-17
+
+- Backlog `Ready` was empty, Roadmap Weeks 1-4 are all complete, and the only `Later` item (AI endpoint summaries) is still blocked on the local-first product decision, so picked a real gap instead: the panel could export OpenAPI and Markdown, but nothing that gets captured traffic into a request client.
+- Added `src/lib/postman-collection.ts`: builds a Postman Collection v2.1 document from grouped captures. Origins become `{{baseUrl}}` variables (single origin keeps the conventional `baseUrl`; multi-origin captures get one host-named variable and one folder per origin, with a numeric suffix when two origins share a host). `{id}`/`{uuid}`/`{hash}` placeholders become Postman `:id` path variables seeded with the value actually observed in a sample, so a request is runnable straight after import; repeated placeholder names get unique keys (`id`, `id2`) because Postman keys path variables by name. Query params are unioned across samples keeping the first observed value, JSON request bodies are pretty-printed (non-JSON bodies pass through as `text`), and the first sample with a response body is saved as a Postman example.
+- Wired Copy/Download Postman actions into the panel's export block, fed by the same redacted, filtered groups as the OpenAPI and Markdown exports and named from the API title field. Also extracted the blob-download dance the panel had repeated four times into one `downloadTextFile` helper.
+- Found a real bug by inspecting an actual downloaded collection rather than trusting the unit tests: headers were emitted as `{name, value}`, copied straight from `HeaderEntry`, but Postman's v2.1 schema keys headers by `key` — every header would have imported empty. Fixed with a `PostmanHeader` type and a regression test covering both request and response headers.
+- Verified end-to-end in real headless Chromium: seeded `chrome.storage.local` with a multi-origin capture, loaded the built extension, clicked Download Postman, and parsed the downloaded file — correct filename (`api-cartographer.postman_collection.json`), two base URL variables, two origin folders, `authorization` arriving as `[REDACTED]` (redaction is applied on the export path), and no console errors.
+- Updated `README.md`, `PRIVACY.md` (the redaction section now names the Postman export path), and the `docs/` demo site feature card.
+- Checks run: `npm run build`, `npm test` (101 passing), `npm audit --audit-level=moderate`, `npm run smoke`.
+
 ## 2026-08-16
 
 - Roadmap Weeks 1-4 are all complete and backlog `Ready` was empty, so pulled two of the three `Later` items.
