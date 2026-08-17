@@ -18,6 +18,7 @@ import {
   RotateCcw,
   Save,
   Search,
+  Send,
   StickyNote,
   Trash2,
   Upload
@@ -42,6 +43,7 @@ import { detectFrameworks } from "../lib/framework-detection";
 import { formatDuration, formatStatusCounts } from "../lib/format";
 import { buildMarkdownReport } from "../lib/markdown-report";
 import { buildOpenApiDocument } from "../lib/openapi";
+import { buildPostmanCollection } from "../lib/postman-collection";
 import { buildProjectDataExport, parseProjectDataImport } from "../lib/project-data";
 import { createCapturedRequestFromHarEntry, parseHarLog } from "../lib/request-model";
 import { redactCapturedRequest, redactEndpointGroups, type RedactionProfile } from "../lib/redaction";
@@ -71,6 +73,15 @@ import type { CapturedRequest, EndpointGroup } from "../lib/types";
 type DevtoolsRequest = chrome.devtools.network.Request;
 
 const EMPTY_GROUPS: EndpointGroup[] = [];
+
+function downloadTextFile(contents: string, fileName: string, mimeType: string): void {
+  const url = URL.createObjectURL(new Blob([contents], { type: mimeType }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
 
 export function App() {
   const [requests, setRequests] = useState<CapturedRequest[]>([]);
@@ -196,6 +207,9 @@ export function App() {
     return JSON.stringify(buildOpenApiDocument(redactedFilteredGroups, openApiTitle, openApiVersion), null, 2);
   }, [redactedFilteredGroups, openApiTitle, openApiVersion]);
   const markdownReport = useMemo(() => buildMarkdownReport(redactedFilteredGroups), [redactedFilteredGroups]);
+  const postmanCollectionJson = useMemo(() => {
+    return JSON.stringify(buildPostmanCollection(redactedFilteredGroups, openApiTitle), null, 2);
+  }, [redactedFilteredGroups, openApiTitle]);
 
   async function copyOpenApi() {
     await navigator.clipboard.writeText(openApiJson);
@@ -203,13 +217,7 @@ export function App() {
   }
 
   function downloadOpenApi() {
-    const blob = new Blob([openApiJson], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "api-cartographer-openapi.json";
-    anchor.click();
-    URL.revokeObjectURL(url);
+    downloadTextFile(openApiJson, "api-cartographer-openapi.json", "application/json");
     setLastExportStatus("OpenAPI downloaded");
   }
 
@@ -219,14 +227,18 @@ export function App() {
   }
 
   function downloadMarkdownReport() {
-    const blob = new Blob([markdownReport], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "api-cartographer-report.md";
-    anchor.click();
-    URL.revokeObjectURL(url);
+    downloadTextFile(markdownReport, "api-cartographer-report.md", "text/markdown");
     setLastExportStatus("Markdown downloaded");
+  }
+
+  async function copyPostmanCollection() {
+    await navigator.clipboard.writeText(postmanCollectionJson);
+    setLastExportStatus("Postman collection copied");
+  }
+
+  function downloadPostmanCollection() {
+    downloadTextFile(postmanCollectionJson, "api-cartographer.postman_collection.json", "application/json");
+    setLastExportStatus("Postman collection downloaded");
   }
 
   function registerRowRef(endpointId: string, element: HTMLButtonElement | null) {
@@ -321,13 +333,7 @@ export function App() {
 
   function exportProjectData() {
     const projectData = buildProjectDataExport({ requests, sessions, endpointPreferences });
-    const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "api-cartographer-project.json";
-    anchor.click();
-    URL.revokeObjectURL(url);
+    downloadTextFile(JSON.stringify(projectData, null, 2), "api-cartographer-project.json", "application/json");
     setLastExportStatus("Project data exported");
   }
 
@@ -630,6 +636,17 @@ export function App() {
                 <Download size={16} />
                 Download MD
               </button>
+              <button className="button button-full" type="button" onClick={copyPostmanCollection}>
+                <Send size={16} />
+                Copy Postman
+              </button>
+              <button className="button button-full" type="button" onClick={downloadPostmanCollection}>
+                <Download size={16} />
+                Download Postman
+              </button>
+              <p className="subtle">
+                Postman export uses the API title above as the collection name, with each origin as a {"{{baseUrl}}"} variable.
+              </p>
               {lastExportStatus !== "idle" ? <p className="subtle">Last export: {lastExportStatus}.</p> : null}
             </div>
           </aside>
