@@ -6,7 +6,7 @@
     <title>API Cartographer — map live network traffic into API docs</title>
     <meta
       name="description"
-      content="A Chrome DevTools extension that turns live network traffic into an API map, OpenAPI 3.1 drafts, Markdown reports, and Postman collections — entirely on your machine."
+      content="A Chrome DevTools extension that turns live network traffic into an API map, OpenAPI 3.1 drafts, Markdown reports, Postman collections, and HAR logs — entirely on your machine."
     />
     <link rel="icon" href="icon-128.png" />
     <style>
@@ -280,10 +280,18 @@
           </p>
         </div>
         <div class="card">
-          <h3>Exports OpenAPI, Markdown, and Postman</h3>
+          <h3>Exports OpenAPI, Markdown, Postman, and HAR</h3>
           <p>
             Copy or download an OpenAPI 3.1 document, a Markdown API report with an endpoint table and per-endpoint
-            details, or a Postman Collection v2.1 file with base URL variables and saved response examples.
+            details, a Postman Collection v2.1 file with base URL variables and saved response examples, or a redacted
+            HAR 1.2 log that re-imports here or in any HAR viewer.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Flags slow and failing endpoints</h3>
+          <p>
+            Endpoint Health ranks the capture by p95 latency and by 4xx/5xx error rate, with p50, p95, and max in the
+            tooltip. Percentiles are computed from every captured request, not a sampled subset.
           </p>
         </div>
         <div class="card">

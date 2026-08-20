@@ -14,6 +14,8 @@ The panel listens to `chrome.devtools.network.onRequestFinished`, asks Chrome fo
 
 - `src/lib/request-model.ts`: HAR-to-domain conversion, path normalization, endpoint grouping.
 - `src/lib/openapi.ts`: OpenAPI 3.1 draft generation and JSON schema inference.
+- `src/lib/har-export.ts`: HAR 1.2 log generation, the inverse of `parseHarLog`.
+- `src/lib/endpoint-metrics.ts`: latency percentiles and error rates over raw requests.
 - `src/lib/storage.ts`: extension storage wrapper.
 - `src/lib/format.ts`: UI formatting helpers.
 

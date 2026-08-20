@@ -25,7 +25,7 @@ most 20 saved sessions.
 ## Redaction defaults
 
 Before request/response samples are shown in the panel, or exported as
-OpenAPI/Markdown/Postman, `src/lib/redaction.ts` redacts:
+OpenAPI/Markdown/Postman/HAR, `src/lib/redaction.ts` redacts:
 
 - Header values whose name matches a sensitive pattern (`authorization`,
   `cookie`, `proxy-authorization`, `set-cookie`, `x-api-key`, `api-key`,
@@ -56,6 +56,12 @@ exist for your own backup/restore rather than for sharing:
   preferences, meant to be re-imported into your own browser. Treat
   exported project data files as sensitive, the same way you would a
   HAR file.
+
+Note that the **HAR export** (`api-cartographer.har`, see
+`src/lib/har-export.ts`) *is* redacted — it runs through the same
+profile as the other exports, so it is safe to share on the same terms
+as the OpenAPI or Markdown output, and unlike a HAR captured straight
+from Chrome's Network panel.
 
 ## Importing files
 

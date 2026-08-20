@@ -11,6 +11,8 @@
 
 ## Done
 
+- Added HAR 1.2 export, closing the round trip with the existing HAR import.
+- Added per-endpoint latency percentiles and error rates, surfaced as an Endpoint Health panel.
 - Added Postman Collection v2.1 export from captured endpoint groups.
 - Added a GitHub Pages demo site under `docs/`.
 - Added framework, API style, and hosting platform detection from captured traffic.
