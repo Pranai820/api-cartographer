@@ -217,6 +217,69 @@ h3 {
   color: #5f6a58;
 }
 
+.health-block {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.health-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.health-summary span {
+  border: 1px solid #d9ded6;
+  border-radius: 6px;
+  background: #f5f6f0;
+  color: #3d463f;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: help;
+}
+
+.health-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.health-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The endpoint table's method chip is sized for a wider column. */
+.health-list .method {
+  width: 44px;
+  height: 20px;
+  font-size: 10px;
+}
+
+.health-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.health-value {
+  font-size: 11px;
+  font-weight: 800;
+  color: #3d463f;
+  cursor: help;
+}
+
+.health-value-error {
+  color: #a12f2f;
+}
+
 .control-block label,
 .block-title {
   gap: 7px;

@@ -8,6 +8,7 @@ import {
   FolderOpen,
   FileText,
   Filter,
+  Gauge,
   Globe2,
   Layers,
   PauseCircle,
@@ -38,16 +39,23 @@ import {
 } from "../lib/endpoint-preferences";
 import { CAPTURED_REQUEST_LIMIT, isAtCaptureLimit, resolveEmptyStateReason } from "../lib/capture-status";
 import { buildEndpointOperation, extractRequestSchema, extractResponseSchemas } from "../lib/endpoint-detail";
+import {
+  computeCaptureMetrics,
+  errorProneEndpoints,
+  formatErrorRate,
+  slowestEndpoints
+} from "../lib/endpoint-metrics";
 import { filterEndpointGroups, listContentTypes, listMethods, listStatusCodes } from "../lib/filters";
 import { detectFrameworks } from "../lib/framework-detection";
 import { formatDuration, formatStatusCounts } from "../lib/format";
+import { buildHarJson } from "../lib/har-export";
 import { buildMarkdownReport } from "../lib/markdown-report";
 import { buildOpenApiDocument } from "../lib/openapi";
 import { buildPostmanCollection } from "../lib/postman-collection";
 import { buildProjectDataExport, parseProjectDataImport } from "../lib/project-data";
 import { createCapturedRequestFromHarEntry, parseHarLog } from "../lib/request-model";
 import { redactCapturedRequest, redactEndpointGroups, type RedactionProfile } from "../lib/redaction";
-import { groupRequests } from "../lib/request-model";
+import { endpointKey, groupRequests } from "../lib/request-model";
 import { buildSdkHints } from "../lib/sdk-hints";
 import {
   describeSessionDiff,
@@ -199,6 +207,16 @@ export function App() {
     }
   }, [selectedGroup, selectedGroupId]);
 
+  // Every request behind the visible endpoints, not just the samples a group
+  // keeps: HAR export and latency percentiles both need the full list.
+  const filteredRequests = useMemo(() => {
+    const visibleIds = new Set(filteredGroups.map((group) => group.id));
+    return requests.filter((request) => visibleIds.has(endpointKey(request)));
+  }, [filteredGroups, requests]);
+  const captureMetrics = useMemo(() => computeCaptureMetrics(filteredRequests), [filteredRequests]);
+  const slowestByP95 = useMemo(() => slowestEndpoints(captureMetrics.endpoints, 3), [captureMetrics]);
+  const failingEndpoints = useMemo(() => errorProneEndpoints(captureMetrics.endpoints, 3), [captureMetrics]);
+
   const redactedFilteredGroups = useMemo(
     () => redactEndpointGroups(filteredGroups, redactionProfile),
     [filteredGroups, redactionProfile]
@@ -210,6 +228,10 @@ export function App() {
   const postmanCollectionJson = useMemo(() => {
     return JSON.stringify(buildPostmanCollection(redactedFilteredGroups, openApiTitle), null, 2);
   }, [redactedFilteredGroups, openApiTitle]);
+  const harJson = useMemo(
+    () => buildHarJson(filteredRequests, { redactionProfile }),
+    [filteredRequests, redactionProfile]
+  );
 
   async function copyOpenApi() {
     await navigator.clipboard.writeText(openApiJson);
@@ -239,6 +261,16 @@ export function App() {
   function downloadPostmanCollection() {
     downloadTextFile(postmanCollectionJson, "api-cartographer.postman_collection.json", "application/json");
     setLastExportStatus("Postman collection downloaded");
+  }
+
+  async function copyHar() {
+    await navigator.clipboard.writeText(harJson);
+    setLastExportStatus("HAR copied");
+  }
+
+  function downloadHar() {
+    downloadTextFile(harJson, "api-cartographer.har", "application/json");
+    setLastExportStatus("HAR downloaded");
   }
 
   function registerRowRef(endpointId: string, element: HTMLButtonElement | null) {
@@ -482,6 +514,68 @@ export function App() {
               {showIgnored ? "Hide Ignored" : "Show Ignored"}
             </button>
   
+            {captureMetrics.totalRequests ? (
+              <div className="health-block">
+                <p className="block-title">
+                  <Gauge size={15} />
+                  Endpoint Health
+                </p>
+                <div className="health-summary">
+                  <span title="95th percentile latency across every timed request">
+                    p95 {captureMetrics.latency ? formatDuration(captureMetrics.latency.p95Ms) : "n/a"}
+                  </span>
+                  <span title={`${captureMetrics.errorCount} of ${captureMetrics.totalRequests} request(s) returned 4xx or 5xx`}>
+                    {formatErrorRate(captureMetrics.errorRate)} errors
+                  </span>
+                </div>
+                {slowestByP95.length ? (
+                  <>
+                    <p className="subtle">Slowest by p95</p>
+                    <ul className="health-list">
+                      {slowestByP95.map((endpoint) => (
+                        <li key={endpoint.id}>
+                          <span className={`method method-${endpoint.method.toLowerCase()}`}>{endpoint.method}</span>
+                          <span className="health-path" title={`${endpoint.origin}${endpoint.pathTemplate}`}>
+                            {endpoint.pathTemplate}
+                          </span>
+                          <span
+                            className="health-value"
+                            title={`p50 ${formatDuration(endpoint.latency?.p50Ms)}, p95 ${formatDuration(
+                              endpoint.latency?.p95Ms
+                            )}, max ${formatDuration(endpoint.latency?.maxMs)} over ${endpoint.latency?.sampleCount} sample(s)`}
+                          >
+                            {formatDuration(endpoint.latency?.p95Ms)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
+                {failingEndpoints.length ? (
+                  <>
+                    <p className="subtle">Most errors</p>
+                    <ul className="health-list">
+                      {failingEndpoints.map((endpoint) => (
+                        <li key={endpoint.id}>
+                          <span className={`method method-${endpoint.method.toLowerCase()}`}>{endpoint.method}</span>
+                          <span className="health-path" title={`${endpoint.origin}${endpoint.pathTemplate}`}>
+                            {endpoint.pathTemplate}
+                          </span>
+                          <span
+                            className="health-value health-value-error"
+                            title={`${endpoint.clientErrorCount} client error(s), ${endpoint.serverErrorCount} server error(s) of ${endpoint.count} request(s)`}
+                          >
+                            {formatErrorRate(endpoint.errorRate)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
+                <p className="subtle">Latency percentiles cover the endpoints currently visible, from every captured request.</p>
+              </div>
+            ) : null}
+
             {detectedFrameworks.length ? (
               <div className="stack-block">
                 <p className="block-title">
@@ -644,8 +738,19 @@ export function App() {
                 <Download size={16} />
                 Download Postman
               </button>
+              <button className="button button-full" type="button" onClick={copyHar}>
+                <Braces size={16} />
+                Copy HAR
+              </button>
+              <button className="button button-full" type="button" onClick={downloadHar}>
+                <Download size={16} />
+                Download HAR
+              </button>
               <p className="subtle">
                 Postman export uses the API title above as the collection name, with each origin as a {"{{baseUrl}}"} variable.
+              </p>
+              <p className="subtle">
+                HAR export writes every captured request behind the visible endpoints, and re-imports here or in any HAR viewer.
               </p>
               {lastExportStatus !== "idle" ? <p className="subtle">Last export: {lastExportStatus}.</p> : null}
             </div>
