@@ -1,3 +1,4 @@
+import { formatGraphQlOperation } from "./graphql-operations";
 import type { CapturedRequest, EndpointGroup, OpenApiDocument } from "./types";
 
 const METHODS_WITH_BODY = new Set(["POST", "PUT", "PATCH"]);
@@ -200,6 +201,88 @@ function buildJsonContent(samples: CapturedRequest[], selectBody: (sample: Captu
   };
 }
 
+interface CombinedGroup {
+  group: EndpointGroup;
+  origins: string[];
+  graphqlOperations: string[];
+}
+
+/**
+ * Counts include untimed requests while `averageDurationMs` is computed only
+ * over timed ones, so weighting by count is an approximation — the group does
+ * not retain how many of its requests carried a duration.
+ */
+function weightedAverage(
+  leftValue: number | undefined,
+  leftWeight: number,
+  rightValue: number | undefined,
+  rightWeight: number
+): number | undefined {
+  if (leftValue === undefined) {
+    return rightValue;
+  }
+
+  if (rightValue === undefined) {
+    return leftValue;
+  }
+
+  const totalWeight = leftWeight + rightWeight;
+
+  return totalWeight === 0 ? leftValue : (leftValue * leftWeight + rightValue * rightWeight) / totalWeight;
+}
+
+/**
+ * OpenAPI keys operations by path and method, so several endpoint groups can
+ * land on one entry: every GraphQL operation sits at `POST /graphql`, and the
+ * same path served by two origins collides the same way. Combining them up
+ * front keeps every observation in the document — assigning per group left only
+ * whichever happened to be last, with no warning.
+ */
+function combineGroups(groups: EndpointGroup[]): CombinedGroup[] {
+  const combined = new Map<string, CombinedGroup>();
+
+  for (const group of groups) {
+    const key = `${group.method.toUpperCase()} ${group.pathTemplate}`;
+    const label = group.graphqlOperation ? formatGraphQlOperation(group.graphqlOperation) : undefined;
+    const existing = combined.get(key);
+
+    if (!existing) {
+      combined.set(key, {
+        group: { ...group, samples: [...group.samples], statusCounts: { ...group.statusCounts } },
+        origins: [group.origin],
+        graphqlOperations: label ? [label] : []
+      });
+      continue;
+    }
+
+    const target = existing.group;
+
+    target.averageDurationMs = weightedAverage(
+      target.averageDurationMs,
+      target.count,
+      group.averageDurationMs,
+      group.count
+    );
+    target.count += group.count;
+    target.samples.push(...group.samples);
+    target.lastSeen = group.lastSeen > target.lastSeen ? group.lastSeen : target.lastSeen;
+
+    for (const [status, count] of Object.entries(group.statusCounts)) {
+      target.statusCounts[status] = (target.statusCounts[status] ?? 0) + count;
+    }
+
+    if (!existing.origins.includes(group.origin)) {
+      existing.origins.push(group.origin);
+    }
+
+    if (label) {
+      existing.graphqlOperations.push(label);
+    }
+  }
+
+  return Array.from(combined.values());
+}
+
 export function buildOpenApiDocument(
   groups: EndpointGroup[],
   title = "Captured API",
@@ -208,7 +291,7 @@ export function buildOpenApiDocument(
   const servers = unique(groups.map((group) => group.origin)).map((url) => ({ url }));
   const paths: OpenApiDocument["paths"] = {};
 
-  for (const group of groups) {
+  for (const { group, origins, graphqlOperations } of combineGroups(groups)) {
     const sample = group.samples[0];
     const method = group.method.toLowerCase();
     const requestContent = METHODS_WITH_BODY.has(group.method.toUpperCase())
@@ -233,9 +316,13 @@ export function buildOpenApiDocument(
       responses,
       "x-api-cartographer": {
         origin: group.origin,
+        ...(origins.length > 1 ? { origins } : {}),
         observedCount: group.count,
         lastSeen: group.lastSeen,
-        averageDurationMs: group.averageDurationMs
+        averageDurationMs: group.averageDurationMs,
+        // OpenAPI has no way to model GraphQL operations, so they are recorded
+        // here rather than invented as separate paths.
+        ...(graphqlOperations.length ? { graphqlOperations } : {})
       }
     };
   }
