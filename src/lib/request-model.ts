@@ -1,3 +1,4 @@
+import { formatGraphQlOperation, parseGraphQlOperation } from "./graphql-operations";
 import type { CapturedRequest, EndpointGroup, HeaderEntry } from "./types";
 
 interface HarHeader {
@@ -64,8 +65,18 @@ export function normalizePath(pathname: string): string {
   return segments.join("/") || "/";
 }
 
-export function endpointKey(request: Pick<CapturedRequest, "method" | "origin" | "pathTemplate">): string {
-  return `${request.method.toUpperCase()} ${request.origin}${request.pathTemplate}`;
+/**
+ * Identity of an endpoint for grouping, metrics, and session diffing. GraphQL
+ * requests carry their operation in the key: they all share one method and path,
+ * so without it every operation on a schema collapses into a single row.
+ */
+export function endpointKey(
+  request: Pick<CapturedRequest, "method" | "origin" | "pathTemplate"> &
+    Partial<Pick<CapturedRequest, "graphqlOperation">>
+): string {
+  const base = `${request.method.toUpperCase()} ${request.origin}${request.pathTemplate}`;
+
+  return request.graphqlOperation ? `${base} [${formatGraphQlOperation(request.graphqlOperation)}]` : base;
 }
 
 export function toHeaderEntries(headers?: HarHeader[]): HeaderEntry[] {
@@ -84,6 +95,8 @@ export function createCapturedRequestFromHarEntry(
   const path = parsedUrl.pathname || "/";
   const queryFromUrl = Array.from(parsedUrl.searchParams.entries()).map(([name, value]) => ({ name, value }));
   const query = entry.request.queryString?.length ? entry.request.queryString : queryFromUrl;
+  const method = entry.request.method.toUpperCase();
+  const requestBody = entry.request.postData?.text;
 
   return {
     id: crypto.randomUUID(),
@@ -91,7 +104,7 @@ export function createCapturedRequestFromHarEntry(
     origin: parsedUrl.origin,
     path,
     pathTemplate: normalizePath(path),
-    method: entry.request.method.toUpperCase(),
+    method,
     status: entry.response.status,
     statusText: entry.response.statusText,
     mimeType: entry.response.content?.mimeType,
@@ -100,9 +113,10 @@ export function createCapturedRequestFromHarEntry(
     requestHeaders: toHeaderEntries(entry.request.headers),
     responseHeaders: toHeaderEntries(entry.response.headers),
     query,
-    requestBody: entry.request.postData?.text,
+    requestBody,
     responseBody,
-    responseContentEncoding
+    responseContentEncoding,
+    graphqlOperation: parseGraphQlOperation({ method, query, requestBody })
   };
 }
 
@@ -166,6 +180,8 @@ export function groupRequests(requests: CapturedRequest[], maxSamplesPerGroup = 
         averageDurationMs: request.durationMs,
         statusCounts: { [String(request.status)]: 1 },
         samples: [request],
+        // Shared by every member: the operation label is part of the group key.
+        graphqlOperation: request.graphqlOperation,
         totalDurationMs: request.durationMs ?? 0,
         durationCount: request.durationMs === undefined ? 0 : 1
       });

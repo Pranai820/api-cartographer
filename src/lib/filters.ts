@@ -1,3 +1,4 @@
+import { formatGraphQlOperation } from "./graphql-operations";
 import type { EndpointGroup } from "./types";
 
 export interface EndpointFilters {
@@ -28,9 +29,12 @@ export function filterEndpointGroups(groups: EndpointGroup[], filters: EndpointF
   const normalizedSearch = filters.search.trim().toLowerCase();
 
   return groups.filter((group) => {
-    const matchesSearch =
-      !normalizedSearch ||
-      `${group.method} ${group.origin}${group.pathTemplate}`.toLowerCase().includes(normalizedSearch);
+    // GraphQL endpoints share one path, so the operation label has to be
+    // searchable or there is no way to find one by name.
+    const searchable = group.graphqlOperation
+      ? `${group.method} ${group.origin}${group.pathTemplate} ${formatGraphQlOperation(group.graphqlOperation)}`
+      : `${group.method} ${group.origin}${group.pathTemplate}`;
+    const matchesSearch = !normalizedSearch || searchable.toLowerCase().includes(normalizedSearch);
     const matchesOrigin = filters.origin === "all" || group.origin === filters.origin;
     const matchesMethod = filters.method === "all" || group.method.toUpperCase() === filters.method;
     const matchesStatus = filters.status === "all" || Boolean(group.statusCounts[filters.status]);

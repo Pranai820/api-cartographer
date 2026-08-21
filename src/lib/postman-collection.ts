@@ -1,4 +1,5 @@
 import { formatDuration, formatStatusCounts } from "./format";
+import { formatGraphQlOperation } from "./graphql-operations";
 import type { CapturedRequest, EndpointGroup, HeaderEntry } from "./types";
 
 export const POSTMAN_SCHEMA_URL = "https://schema.getpostman.com/json/collection/v2.1.0/collection.json";
@@ -287,7 +288,11 @@ function buildRequestItem(group: EndpointGroup, baseUrlKey: string): PostmanRequ
   };
 
   return {
-    name: `${group.method.toUpperCase()} ${group.pathTemplate}`,
+    // GraphQL groups all share one method and path, so the operation is what
+    // makes them distinguishable in Postman's sidebar.
+    name: group.graphqlOperation
+      ? `${group.method.toUpperCase()} ${group.pathTemplate} (${formatGraphQlOperation(group.graphqlOperation)})`
+      : `${group.method.toUpperCase()} ${group.pathTemplate}`,
     request,
     response: buildResponseExamples(group, request)
   };

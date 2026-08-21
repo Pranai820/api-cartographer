@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createCapturedRequestFromHarEntry, groupRequests, normalizePath, parseHarLog } from "../src/lib/request-model";
+import { createCapturedRequestFromHarEntry, endpointKey, groupRequests, normalizePath, parseHarLog } from "../src/lib/request-model";
 
 vi.stubGlobal("crypto", {
   randomUUID: () => "request-id"
@@ -85,5 +85,49 @@ describe("request model", () => {
     expect(parseHarLog({})).toEqual([]);
     expect(parseHarLog(null)).toEqual([]);
     expect(parseHarLog({ log: { entries: "nope" } })).toEqual([]);
+  });
+});
+
+describe("graphql grouping", () => {
+  function graphQlEntry(document: string, operationName?: string) {
+    return {
+      request: {
+        method: "POST",
+        url: "https://api.example.com/graphql",
+        postData: { text: JSON.stringify({ query: document, operationName }) }
+      },
+      response: { status: 200 },
+      startedDateTime: "2026-08-21T00:00:00.000Z"
+    };
+  }
+
+  it("keeps GraphQL operations in separate groups instead of collapsing them", () => {
+    const requests = [
+      createCapturedRequestFromHarEntry(graphQlEntry("query Users { users { id } }")),
+      createCapturedRequestFromHarEntry(graphQlEntry("query Users { users { id } }")),
+      createCapturedRequestFromHarEntry(graphQlEntry("mutation CreateUser($i: I!) { createUser(input: $i) { id } }"))
+    ];
+    const groups = groupRequests(requests);
+
+    expect(groups).toHaveLength(2);
+    expect(groups.map((group) => group.count)).toEqual([2, 1]);
+    expect(groups.map((group) => group.graphqlOperation?.name)).toEqual(["Users", "CreateUser"]);
+    expect(groups.every((group) => group.pathTemplate === "/graphql")).toBe(true);
+  });
+
+  it("leaves non-GraphQL requests keyed exactly as before", () => {
+    const request = createCapturedRequestFromHarEntry({
+      request: { method: "POST", url: "https://api.example.com/users", postData: { text: '{"name":"Ada"}' } },
+      response: { status: 201 }
+    });
+
+    expect(request.graphqlOperation).toBeUndefined();
+    expect(endpointKey(request)).toBe("POST https://api.example.com/users");
+  });
+
+  it("qualifies the endpoint key with the operation", () => {
+    const request = createCapturedRequestFromHarEntry(graphQlEntry("mutation SignIn { signIn { token } }"));
+
+    expect(endpointKey(request)).toBe("POST https://api.example.com/graphql [mutation SignIn]");
   });
 });

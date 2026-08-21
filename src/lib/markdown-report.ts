@@ -1,4 +1,5 @@
 import { formatDuration, formatStatusCounts } from "./format";
+import { formatGraphQlOperation } from "./graphql-operations";
 import type { EndpointGroup } from "./types";
 
 function escapeMarkdown(value: string): string {
@@ -7,6 +8,13 @@ function escapeMarkdown(value: string): string {
 
 function code(value: string | number | undefined): string {
   return `\`${String(value ?? "-").replace(/`/g, "\\`")}\``;
+}
+
+/** Endpoint path, qualified by GraphQL operation when the group has one. */
+function endpointLabel(group: EndpointGroup): string {
+  return group.graphqlOperation
+    ? `${group.pathTemplate} (${formatGraphQlOperation(group.graphqlOperation)})`
+    : group.pathTemplate;
 }
 
 function endpointTable(groups: EndpointGroup[]): string[] {
@@ -20,7 +28,7 @@ function endpointTable(groups: EndpointGroup[]): string[] {
     ...groups.map((group) =>
       [
         code(group.method.toUpperCase()),
-        code(group.pathTemplate),
+        code(endpointLabel(group)),
         code(group.origin),
         group.count.toString(),
         escapeMarkdown(formatStatusCounts(group.statusCounts)),
@@ -36,7 +44,7 @@ function endpointDetails(groups: EndpointGroup[]): string[] {
     const queryNames = Array.from(new Set(group.samples.flatMap((item) => item.query.map((query) => query.name))));
 
     return [
-      `### ${escapeMarkdown(group.method.toUpperCase())} ${code(group.pathTemplate)}`,
+      `### ${escapeMarkdown(group.method.toUpperCase())} ${code(endpointLabel(group))}`,
       "",
       `- Origin: ${code(group.origin)}`,
       `- Observed requests: ${group.count}`,
@@ -50,8 +58,13 @@ function endpointDetails(groups: EndpointGroup[]): string[] {
 }
 
 export function buildMarkdownReport(groups: EndpointGroup[], title = "Captured API"): string {
-  const sortedGroups = [...groups].sort((left, right) =>
-    left.origin.localeCompare(right.origin) || left.pathTemplate.localeCompare(right.pathTemplate) || left.method.localeCompare(right.method)
+  const sortedGroups = [...groups].sort(
+    (left, right) =>
+      left.origin.localeCompare(right.origin) ||
+      left.pathTemplate.localeCompare(right.pathTemplate) ||
+      left.method.localeCompare(right.method) ||
+      // GraphQL groups tie on all three, so fall back to the operation-bearing id.
+      left.id.localeCompare(right.id)
   );
   const origins = Array.from(new Set(sortedGroups.map((group) => group.origin)));
   const requestCount = sortedGroups.reduce((total, group) => total + group.count, 0);
