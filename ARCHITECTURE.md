@@ -13,6 +13,7 @@ The panel listens to `chrome.devtools.network.onRequestFinished`, asks Chrome fo
 ## Core Modules
 
 - `src/lib/request-model.ts`: HAR-to-domain conversion, path normalization, endpoint grouping.
+- `src/lib/graphql-operations.ts`: GraphQL payload recognition and operation naming.
 - `src/lib/openapi.ts`: OpenAPI 3.1 draft generation and JSON schema inference.
 - `src/lib/har-export.ts`: HAR 1.2 log generation, the inverse of `parseHarLog`.
 - `src/lib/endpoint-metrics.ts`: latency percentiles and error rates over raw requests.
@@ -23,7 +24,10 @@ The panel listens to `chrome.devtools.network.onRequestFinished`, asks Chrome fo
 
 1. Chrome DevTools emits completed network request metadata.
 2. The panel converts each entry into `CapturedRequest`.
-3. Requests are grouped into `EndpointGroup` records for display.
+3. Requests are grouped into `EndpointGroup` records for display, keyed by
+   `endpointKey` — method, origin, path template, and, for GraphQL, the
+   operation, which is what keeps one transport path from collapsing a whole
+   schema into a single endpoint.
 4. The export layer converts visible groups into an OpenAPI document.
 
 ## Constraints

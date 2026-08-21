@@ -6,6 +6,9 @@ API Cartographer is a Chrome DevTools extension that watches live network traffi
 
 - Capture requests from the DevTools Network API while the custom panel is open.
 - Group traffic by origin, method, and normalized path template.
+- Split GraphQL traffic by operation, so a schema served from one
+  `POST /graphql` path reads as one row per query/mutation rather than a
+  single row with every request in it.
 - Inspect sample request headers and response bodies.
 - Export visible endpoint groups as OpenAPI 3.1 JSON, a Markdown report, a
   Postman Collection v2.1 file, or a HAR 1.2 log that re-imports here or in

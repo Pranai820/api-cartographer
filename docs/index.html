@@ -273,6 +273,13 @@
           </p>
         </div>
         <div class="card">
+          <h3>Splits GraphQL by operation</h3>
+          <p>
+            A schema served from a single <code>POST /graphql</code> reads as one row per query and mutation, each with
+            its own latency, error rate, and samples, instead of one row holding every request.
+          </p>
+        </div>
+        <div class="card">
           <h3>Infers schemas across samples</h3>
           <p>
             Request and response bodies are merged across multiple samples, handling nested arrays, nullable fields, and

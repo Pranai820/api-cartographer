@@ -11,6 +11,10 @@
 
 ## Done
 
+- Added GraphQL operation grouping, so a schema served from one `POST /graphql`
+  path reads as one endpoint per query/mutation.
+- Fixed OpenAPI export silently dropping endpoint groups that shared a path and
+  method (two origins serving the same path, and every GraphQL operation).
 - Added HAR 1.2 export, closing the round trip with the existing HAR import.
 - Added per-endpoint latency percentiles and error rates, surfaced as an Endpoint Health panel.
 - Added Postman Collection v2.1 export from captured endpoint groups.

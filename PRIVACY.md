@@ -43,6 +43,20 @@ Redaction is heuristic (name and pattern matching), not a guarantee —
 review exports before sharing them outside your own machine, especially
 for APIs using non-standard auth header or field names.
 
+## GraphQL operations
+
+For GraphQL traffic, the operation type and name (for example
+`mutation CreateUser`) are read from the request body at capture time
+and stored alongside the request, because they are what distinguishes
+one GraphQL endpoint from another. They are shown in the panel and
+written into exports as an endpoint label.
+
+GraphQL `variables` are never read. They routinely carry credentials
+and personal data, and an operation label ends up in shared output, so
+`src/lib/graphql-operations.ts` takes only the operation type and name
+from the document. Variables remain part of the request body and are
+redacted on the same terms as any other JSON body.
+
 ## What is *not* redacted
 
 Two things intentionally keep the raw, unredacted data, because they
