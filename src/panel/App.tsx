@@ -48,6 +48,7 @@ import {
 import { filterEndpointGroups, listContentTypes, listMethods, listStatusCodes } from "../lib/filters";
 import { detectFrameworks } from "../lib/framework-detection";
 import { formatDuration, formatStatusCounts } from "../lib/format";
+import { formatGraphQlOperation } from "../lib/graphql-operations";
 import { buildHarJson } from "../lib/har-export";
 import { buildMarkdownReport } from "../lib/markdown-report";
 import { buildOpenApiDocument } from "../lib/openapi";
@@ -443,7 +444,7 @@ export function App() {
                 id="endpoint-search"
                 value={filter}
                 onChange={(event) => setFilter(event.target.value)}
-                placeholder="method, origin, path"
+                placeholder="method, origin, path, operation"
               />
             </div>
   
@@ -535,8 +536,15 @@ export function App() {
                       {slowestByP95.map((endpoint) => (
                         <li key={endpoint.id}>
                           <span className={`method method-${endpoint.method.toLowerCase()}`}>{endpoint.method}</span>
-                          <span className="health-path" title={`${endpoint.origin}${endpoint.pathTemplate}`}>
-                            {endpoint.pathTemplate}
+                          <span
+                            className="health-path"
+                            title={`${endpoint.origin}${endpoint.pathTemplate}${
+                              endpoint.graphqlOperation ? ` (${formatGraphQlOperation(endpoint.graphqlOperation)})` : ""
+                            }`}
+                          >
+                            {endpoint.graphqlOperation
+                              ? formatGraphQlOperation(endpoint.graphqlOperation)
+                              : endpoint.pathTemplate}
                           </span>
                           <span
                             className="health-value"
@@ -558,8 +566,15 @@ export function App() {
                       {failingEndpoints.map((endpoint) => (
                         <li key={endpoint.id}>
                           <span className={`method method-${endpoint.method.toLowerCase()}`}>{endpoint.method}</span>
-                          <span className="health-path" title={`${endpoint.origin}${endpoint.pathTemplate}`}>
-                            {endpoint.pathTemplate}
+                          <span
+                            className="health-path"
+                            title={`${endpoint.origin}${endpoint.pathTemplate}${
+                              endpoint.graphqlOperation ? ` (${formatGraphQlOperation(endpoint.graphqlOperation)})` : ""
+                            }`}
+                          >
+                            {endpoint.graphqlOperation
+                              ? formatGraphQlOperation(endpoint.graphqlOperation)
+                              : endpoint.pathTemplate}
                           </span>
                           <span
                             className="health-value health-value-error"
@@ -797,7 +812,14 @@ export function App() {
                         onClick={() => setSelectedGroupId(group.id)}
                       >
                         <span className={`method method-${group.method.toLowerCase()}`}>{group.method}</span>
-                        <span className="endpoint-path">{group.pathTemplate}</span>
+                        <span className="endpoint-path-cell">
+                          <span className="endpoint-path">{group.pathTemplate}</span>
+                          {group.graphqlOperation ? (
+                            <span className="endpoint-operation">
+                              {formatGraphQlOperation(group.graphqlOperation)}
+                            </span>
+                          ) : null}
+                        </span>
                         <span className="endpoint-origin">{group.origin}</span>
                         <span className="endpoint-count">{group.count}</span>
                       </button>
@@ -963,6 +985,9 @@ function EndpointDetail({
         <div>
           <p className="eyebrow">{group.method}</p>
           <h2>{group.pathTemplate}</h2>
+          {group.graphqlOperation ? (
+            <p className="detail-operation">{formatGraphQlOperation(group.graphqlOperation)}</p>
+          ) : null}
         </div>
         <span className="status-pill">{formatStatusCounts(group.statusCounts)}</span>
       </div>

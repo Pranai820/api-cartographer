@@ -1,5 +1,5 @@
 import { endpointKey } from "./request-model";
-import type { CapturedRequest, HttpMethod } from "./types";
+import type { CapturedRequest, GraphQlOperation, HttpMethod } from "./types";
 
 export interface LatencyStats {
   /** Number of requests that carried a usable duration. */
@@ -26,6 +26,12 @@ export interface EndpointMetrics {
   errorRate: number;
   /** Undefined when no request for this endpoint reported a duration. */
   latency?: LatencyStats;
+  /**
+   * Set when the endpoint is one GraphQL operation. Metrics key off
+   * `endpointKey`, so GraphQL operations are measured separately even though
+   * they share a path — the label is what tells them apart when rendered.
+   */
+  graphqlOperation?: GraphQlOperation;
 }
 
 export interface CaptureMetrics {
@@ -125,7 +131,8 @@ export function computeEndpointMetrics(requests: CapturedRequest[]): EndpointMet
           clientErrorCount: 0,
           serverErrorCount: 0,
           errorCount: 0,
-          errorRate: 0
+          errorRate: 0,
+          graphqlOperation: request.graphqlOperation
         },
         durations: []
       };

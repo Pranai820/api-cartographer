@@ -479,6 +479,12 @@ select:focus {
   color: #a63030;
 }
 
+.endpoint-path-cell {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
 .endpoint-path {
   min-width: 0;
   overflow: hidden;
@@ -486,6 +492,24 @@ select:focus {
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* GraphQL groups share one path, so the operation is what tells rows apart. */
+.endpoint-operation {
+  min-width: 0;
+  overflow: hidden;
+  color: #2d6b8b;
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-operation {
+  margin: 2px 0 0;
+  color: #2d6b8b;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .endpoint-origin {

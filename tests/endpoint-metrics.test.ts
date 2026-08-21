@@ -278,3 +278,41 @@ describe("formatErrorRate", () => {
     expect(formatErrorRate(1 / 500)).toBe("<1%");
   });
 });
+
+describe("graphql endpoints", () => {
+  function graphQlRequest(name: string, type: "query" | "mutation", overrides: Partial<CapturedRequest> = {}) {
+    return request({
+      url: "https://api.example.com/graphql",
+      path: "/graphql",
+      pathTemplate: "/graphql",
+      method: "POST",
+      graphqlOperation: { type, name, operationCount: 1 },
+      ...overrides
+    });
+  }
+
+  it("measures each GraphQL operation separately instead of pooling the path", () => {
+    const metrics = computeEndpointMetrics([
+      graphQlRequest("Users", "query", { durationMs: 20 }),
+      graphQlRequest("Users", "query", { durationMs: 30 }),
+      graphQlRequest("CreateUser", "mutation", { durationMs: 900, status: 500 })
+    ]);
+
+    expect(metrics).toHaveLength(2);
+
+    const slow = metrics.find((endpoint) => endpoint.graphqlOperation?.name === "CreateUser");
+    const fast = metrics.find((endpoint) => endpoint.graphqlOperation?.name === "Users");
+
+    expect(slow?.latency?.p95Ms).toBe(900);
+    expect(slow?.errorRate).toBe(1);
+    expect(fast?.latency?.p95Ms).toBe(30);
+    expect(fast?.errorRate).toBe(0);
+  });
+
+  it("carries the operation so the health list can tell identical paths apart", () => {
+    const metrics = computeEndpointMetrics([graphQlRequest("Users", "query", { durationMs: 10 })]);
+
+    expect(metrics[0].pathTemplate).toBe("/graphql");
+    expect(metrics[0].graphqlOperation).toEqual({ type: "query", name: "Users", operationCount: 1 });
+  });
+});
