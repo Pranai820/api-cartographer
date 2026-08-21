@@ -5,6 +5,17 @@ export interface HeaderEntry {
   value: string;
 }
 
+/** "batch" covers a single HTTP request carrying several GraphQL operations. */
+export type GraphQlOperationType = "query" | "mutation" | "subscription" | "batch";
+
+export interface GraphQlOperation {
+  type: GraphQlOperationType;
+  /** Operation name when the payload or document names one; absent for anonymous operations. */
+  name?: string;
+  /** Operations carried by the HTTP request: 1 normally, more for batched payloads. */
+  operationCount: number;
+}
+
 export interface CapturedRequest {
   id: string;
   url: string;
@@ -23,6 +34,8 @@ export interface CapturedRequest {
   requestBody?: string;
   responseBody?: string;
   responseContentEncoding?: string;
+  /** Present only when the request body parses as a GraphQL payload. */
+  graphqlOperation?: GraphQlOperation;
 }
 
 export interface EndpointGroup {
@@ -35,6 +48,8 @@ export interface EndpointGroup {
   averageDurationMs?: number;
   statusCounts: Record<string, number>;
   samples: CapturedRequest[];
+  /** Set when every request in the group shares one GraphQL operation. */
+  graphqlOperation?: GraphQlOperation;
 }
 
 export interface OpenApiDocument {
